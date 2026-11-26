@@ -301,6 +301,10 @@ tbody tr.active{background:var(--teal-soft)}
 .selected-project-comparison{display:grid;gap:12px;border-left:4px solid var(--teal)}
 .selected-project-comparison .tag{margin-left:6px}
 
+.project-review-prompts{display:grid;gap:8px}
+.project-review-prompts .project-prompt{align-self:flex-start;margin-top:auto;white-space:normal;text-align:left}
+.project-review-prompts .project-prompt[aria-pressed=true]{border-color:var(--teal);background:var(--teal-soft);color:var(--teal)}
+.rd-saved-note .rd-saved-reason{margin-top:4px;overflow-wrap:anywhere}
 </style>
 </head>
 <body>
@@ -1296,6 +1300,59 @@ function projectDesignFields(design, current) {
   }).join('');
 }
 
+
+function projectReviewRecommendations(design, record) {
+  if (!record) return [];
+  const recommendations = [];
+  const currentModel = PROJECT_MODELS[design.model];
+  const pastModel = PROJECT_MODELS[record.model];
+  const currentEndpoint = PROJECT_ENDPOINTS[design.endpoint];
+  const pastEndpoint = PROJECT_ENDPOINTS[record.endpoint];
+
+  if (design.model !== record.model) {
+    recommendations.push({
+      id:'model', label:'모델 차이',
+      question:`${pastModel}의 결과를 ${currentModel} 계획 검토에 참고할 수 있는 범위는 어디까지인가?`,
+      reason:`과거 모델은 ‘${pastModel}’, 현재 모델은 ‘${currentModel}’입니다. 모델이 달라 과거 결과가 현재 계획에서도 같은 의미를 갖는지 확인해야 합니다.`
+    });
+  }
+  if (design.endpoint !== record.endpoint) {
+    recommendations.push({
+      id:'endpoint', label:'평가 지표 차이',
+      question:`‘${pastEndpoint}’(과거)와 ‘${currentEndpoint}’(현재)는 각각 어떤 판단에 쓰이며, 두 지표를 연결하려면 어떤 근거가 필요한가?`,
+      reason:`과거 지표는 ‘${pastEndpoint}’, 현재 지표는 ‘${currentEndpoint}’입니다. 모델이 같아도 두 지표는 같은 결과를 설명한다고 보기 어렵습니다.`
+    });
+  }
+  if (design.measurement !== record.measurement) {
+    recommendations.push({
+      id:'measurement', label:'측정 조건 차이',
+      question:'두 결과를 나란히 해석하기 전에 어떤 집계 기준, 단위 또는 기준값을 확인해야 하는가?',
+      reason:`현재 계획은 ‘${design.measurement}’, 과거 프로젝트는 ‘${record.measurement}’로 기록합니다. 측정 방식과 집계 기준의 차이가 결과의 해석 범위에 영향을 줄 수 있습니다.`
+    });
+  }
+  if (design.model === record.model && design.endpoint === record.endpoint) {
+    recommendations.push({
+      id:'reuse', label:'재사용할 근거',
+      question:`같은 ${currentModel}에서 ‘${currentEndpoint}’를 평가한 과거 보고서의 기록 방식 중 이번 계획에 재사용할 수 있는 것은 무엇인가?`,
+      reason:'모델과 평가 지표가 일치해 과거 기록이 참고가 됩니다. 측정 방법과 판정 기준은 실제로 일치하는지 확인해야 합니다.'
+    });
+  }
+  return recommendations;
+}
+
+function projectRecommendationsHTML(items, applied) {
+  return `<section class="project-review-prompts" aria-labelledby="projectPromptsTitle">
+    <h4 id="projectPromptsTitle">추천 리뷰 질문</h4>
+    <div class="rd-pair">${items.map(item => `<article class="rd-evidence related-project">
+      <p class="eyebrow">${item.label}</p>
+      <h4>${item.question}</h4>
+      <p class="sub"><b>추천 이유</b> · ${item.reason}</p>
+      <button type="button" class="btn ghost compact project-prompt" data-prompt="${item.id}"
+        aria-pressed="${applied?.id === item.id}" aria-controls="rdNoteText">${applied?.id === item.id ? '편집란에 반영됨' : '이 질문으로 작성'}</button>
+    </article>`).join('')}</div>
+  </section>`;
+}
+
 function renderRelatedProjects(item) {
   const design = item.plan.design;
   const matches = RELATED_PROJECT_ARCHIVE.filter(record => record.targetId !== cur.id)
@@ -1306,6 +1363,8 @@ function renderRelatedProjects(item) {
   const filters = document.querySelectorAll('#relatedProjectFilters button');
   const results = $('relatedProjectResults');
   const selectedRecord = () => matches.find(match => match.record.id === pastReferences.get(item))?.record;
+  let recommendations = [];
+  let applied;
   const renderMatches = filter => {
     const visible = filter === 'all' ? matches : matches.filter(match => match[filter]);
     $('relatedProjectCount').textContent = `${visible.length}건`;
@@ -1342,32 +1401,53 @@ function renderRelatedProjects(item) {
       button.setAttribute('aria-pressed', String(isSelected));
       button.textContent = isSelected ? '선택됨' : '선택해서 비교';
     });
-    renderSelectedProject(item, selected);
+    recommendations = projectReviewRecommendations(design, selected);
+    renderSelectedProject(item, selected, recommendations, applied);
   };
   results.addEventListener('click', event => {
     const button = event.target.closest('[data-reference]');
     if (!button) return;
-    if (pastReferences.get(item) !== button.dataset.reference) $('rdSaveStatus').textContent = '';
+    if (pastReferences.get(item) !== button.dataset.reference) {
+      if (applied) $('rdSaveStatus').textContent = '작성 중인 질문은 유지했습니다. 새 참고 보고서에 맞는지 확인하세요.';
+      else $('rdSaveStatus').textContent = '';
+      applied = undefined;
+    }
     pastReferences.set(item, button.dataset.reference);
     updateSelection();
     $('selectedProjectTitle').focus();
   });
-  $('selectedProjectComparison').addEventListener('click', event => {
+  const comparison = $('selectedProjectComparison');
+  comparison.addEventListener('click', event => {
+    const promptButton = event.target.closest('[data-prompt]');
+    if (promptButton) {
+      applied = recommendations.find(item => item.id === promptButton.dataset.prompt);
+      const editor = $('rdNoteText');
+      editor.value = applied.question;
+      $('rdSaveStatus').textContent = '추천 질문을 편집란에 넣었습니다. 수정한 뒤 출처와 함께 저장할 수 있습니다.';
+      comparison.querySelectorAll('[data-prompt]').forEach(button => {
+        const active = button === promptButton;
+        button.setAttribute('aria-pressed', String(active));
+        button.textContent = active ? '편집란에 반영됨' : '이 질문으로 작성';
+      });
+      editor.focus();
+      return;
+    }
     if (event.target.id !== 'clearProjectReference') return;
     const previous = selectedRecord();
     pastReferences.delete(item);
-    $('rdSaveStatus').textContent = '';
+    $('rdSaveStatus').textContent = applied ? '작성 중인 질문은 유지했습니다. 참고 보고서 인용을 해제했습니다.' : '';
+    applied = undefined;
     updateSelection();
     (results.querySelector(`[data-reference="${previous.id}"]`) ||
       document.querySelector('#relatedProjectFilters [aria-pressed="true"]')).focus();
   });
   renderMatches('all');
   updateSelection();
-  return selectedRecord;
+  return () => ({reference:selectedRecord(), recommendation:applied});
 }
 
 
-function renderSelectedProject(item, record) {
+function renderSelectedProject(item, record, recommendations, applied) {
   const container = $('selectedProjectComparison');
   container.classList.toggle('hidden', !record);
   const noteSource = $('rdReferenceSource');
@@ -1398,7 +1478,8 @@ function renderSelectedProject(item, record) {
       ${pastSource(record)}
     </article>
   </div>
-  <p><b>해석할 때 확인할 점</b> · ${record.caution}</p>`;
+  <p><b>해석할 때 확인할 점</b> · ${record.caution}</p>
+  ${projectRecommendationsHTML(recommendations, applied)}`;
 }
 
 const PAST_PROJECT_STATUS = {
@@ -1466,8 +1547,8 @@ function renderPastCase(item) {
   </section>
   <section class="card selected-project-comparison hidden" id="selectedProjectComparison" aria-labelledby="selectedProjectTitle"></section>
   ${rdNoteForm('남은 질문', '출처와 함께 저장')}`;
-  const selectedReference = renderRelatedProjects(item);
-  bindRDNote({mode:'compare',questionId:item.id,next:item.next,sources:[item.past,item.plan],selectedReference});
+  const getReviewContext = renderRelatedProjects(item);
+  bindRDNote({mode:'compare',questionId:item.id,next:item.next,sources:[item.past,item.plan],getReviewContext});
 }
 
 function pastSource(source) {
@@ -1573,17 +1654,18 @@ function rdNoteForm(label, button) {
   </form>`;
 }
 
-function bindRDNote({mode,questionId,next,sources,selectedReference}) {
+function bindRDNote({mode,questionId,next,sources,getReviewContext}) {
   const targetId = cur.id;
   const input = $('rdNoteText');
   input.value = next;
   $('rdNoteForm').addEventListener('submit', event => {
     event.preventDefault();
-    const reference = selectedReference?.();
+    const {reference,recommendation} = getReviewContext?.() || {};
     const attachments = reference ? [...sources,reference] : sources;
     const note = {
       targetId, mode, questionId, text:input.value.trim(),
       referenceId:reference?.id,
+      recommendation:recommendation && {id:recommendation.id,reason:recommendation.reason},
       sources:attachments.map(item => item ? {name:item.source, location:item.location, url:item.url} : null)
     };
     if (!note.text) {
@@ -1592,7 +1674,8 @@ function bindRDNote({mode,questionId,next,sources,selectedReference}) {
       return;
     }
     if (rdNotes.some(saved => (saved.mode || 'evidence') === mode && saved.targetId === targetId &&
-      saved.questionId === questionId && saved.text === note.text && saved.referenceId === note.referenceId)) {
+      saved.questionId === questionId && saved.text === note.text && saved.referenceId === note.referenceId &&
+      saved.recommendation?.id === note.recommendation?.id)) {
       $('rdSaveStatus').textContent = '이미 저장된 질문입니다. 저장한 리뷰 질문에서 확인할 수 있습니다.';
       return;
     }
@@ -1634,12 +1717,18 @@ function renderRDNotes() {
       <div class="rd-saved-heading"><span class="pill">${target.sym}</span>
         <button class="btn ghost compact" onclick="${open}">${past ? '과거 프로젝트 비교 열기' : '근거 비교 열기'}</button></div>
       <p class="rd-saved-text"></p>
+      <p class="sub rd-saved-reason hidden"></p>
       <ul><li>${past ? '과거 보고서' : '내부'} · </li><li>${past ? '현재 계획서' : '외부'} · </li>${past && note.sources?.[2] ? '<li>참고 프로젝트 보고서 · </li>' : ''}</ul>
     </article>`;
   }).join('');
   $('rdSavedNotes').querySelectorAll('.rd-saved-note').forEach((article,index) => {
     const note = rdNotes[index];
     article.querySelector('.rd-saved-text').textContent = note.text;
+    if (typeof note.recommendation?.reason === 'string') {
+      const reason = article.querySelector('.rd-saved-reason');
+      reason.textContent = '추천 이유 · ' + note.recommendation.reason;
+      reason.classList.remove('hidden');
+    }
     article.querySelectorAll('li').forEach((item,sourceIndex) => {
       const source = note.sources?.[sourceIndex];
       if (!source || typeof source.name !== 'string' || typeof source.location !== 'string') {
