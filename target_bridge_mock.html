@@ -283,6 +283,18 @@ tbody tr.active{background:var(--teal-soft)}
 #pastReviewContent{display:grid;gap:14px}
 .past-assessment[data-status=included]{border-left-color:var(--green)}
 .past-assessment[data-status=pending]{border-left-color:var(--red)}
+
+.related-projects,.related-project,.related-project-head{min-width:0}
+.related-projects{display:grid;gap:12px}
+.related-project-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+#relatedProjectFilters button[aria-pressed=true]{background:var(--ink);color:#fff;border-color:var(--ink)}
+#relatedProjectResults{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:12px}
+.related-project{padding:14px;border:1px solid var(--line);border-radius:12px;background:#f8fafb}
+.rd-review .related-project h4{margin:0;color:var(--ink);font-size:15px;letter-spacing:0;text-transform:none}
+.related-project-reasons{display:flex;flex-wrap:wrap;gap:4px}
+.related-project-reasons .tag{white-space:normal}
+.related-project-differences{margin:0;padding-left:18px;color:var(--muted);font-size:13px}
+
 </style>
 </head>
 <body>
@@ -1167,7 +1179,8 @@ const PAST_PROJECTS = {
       past:{source:'PRJ-2017-09 · LRRK2 최종 보고서.pdf', location:'p. 12 결과 · p. 19 결론',
         excerpt:'혈장 노출이 확인되었다. 평가 시점의 뇌 표적 관여 자료는 수집되지 않았다. 최종 검토에서 효능 결과의 해석을 보류했다.'},
       plan:{source:'CN-0412 · LRRK2 연구계획서 v2.pdf', location:'§ 4.2 평가 지표',
-        excerpt:'뇌 조직의 pRab10을 표적 관여 지표로 기록한다. 효능 분석은 계획서의 효능 평가 항목을 따른다.'},
+        design:{model:'g2019s',endpoint:'rab10',measurement:'선조체 조직 · 기준 대비 pRab10 변화율'},
+        excerpt:'G2019S 마우스의 선조체 조직에서 pRab10 변화율을 기록한다. 효능 분석은 계획서의 효능 평가 항목을 따른다.'},
       observation:'혈장 노출은 확인됐고, 뇌 표적 관여 측정 자료는 없었습니다.',
       interpretation:'보고서는 효능 결과를 표적 관여와 연결하기 어렵다고 판단해 해석을 보류했습니다.',
       change:'현재 계획은 뇌 조직 pRab10을 표적 관여 지표에 추가했습니다.',
@@ -1179,7 +1192,8 @@ const PAST_PROJECTS = {
       past:{source:'PRJ-2020-11 · LRRK2 분석 보고서.pdf', location:'p. 8 결과 · p. 10 한계',
         excerpt:'군별 결과표에 분석 제외 건수가 집계되었다. 개별 제외 사유가 표에 없어 결과의 민감도를 검토하기 어려웠다.'},
       plan:{source:'CN-0412 · LRRK2 연구계획서 v2.pdf', location:'§ 6.1 분석 대상과 제외 기록',
-        excerpt:'군별 총 관찰 건수, 분석에 포함된 건수와 제외 사유를 결과표에 기록한다.'},
+        design:{model:'g2019s',endpoint:'rotarod',measurement:'가속 로타로드 · 개체별 기준값 대비 변화'},
+        excerpt:'G2019S 마우스의 가속 로타로드 낙하 지연시간을 기준값 대비 변화로 기록한다. 군별 총 관찰 건수, 분석에 포함된 건수와 제외 사유를 결과표에 기록한다.'},
       observation:'과거 결과표에는 군별 분석 제외 건수가 기록됐습니다.',
       interpretation:'보고서는 제외 사유를 확인할 수 없어 해당 제외가 결과 해석에 미친 영향을 검토하기 어렵다고 적었습니다.',
       change:'현재 계획은 군별 전체·분석 대상 건수와 제외 사유를 함께 기록하도록 명시했습니다.',
@@ -1193,7 +1207,8 @@ const PAST_PROJECTS = {
       past:{source:'PRJ-2019-14 · SCN8A 발작 판독 검토.pdf', location:'p. 7 판독 결과 · p. 11 논의',
         excerpt:'같은 관찰 기록에서 판독자별 집계가 달랐다. 경계 사례의 분류 기준이 통일되지 않아 군 간 차이의 해석이 제한됐다.'},
       plan:{source:'CN-0233 · SCN8A 연구계획서 v2.pdf', location:'§ 5.3 발작 정의와 판독',
-        excerpt:'집계할 발작 사건의 정의를 분석 전에 확정한다. 독립 판독 결과가 다르면 합의 결과와 근거를 기록한다.'},
+        design:{model:'scn8a',endpoint:'seizureFrequency',measurement:'자발 발작 횟수 · 개체별 관찰 기간 기준'},
+        excerpt:'Scn8a N1768D/+ 마우스의 자발 발작을 관찰 기간별로 집계한다. 사건 정의를 사전에 확정하고 독립 판독 결과가 다르면 합의 근거를 기록한다.'},
       observation:'동일한 관찰 기록에서 판독자별 발작 횟수가 달랐습니다.',
       interpretation:'과거 보고서는 경계 사례의 집계 기준 차이를 군 간 비교의 한계로 기록했습니다.',
       change:'현재 계획은 사전 사건 정의, 독립 판독, 이견과 합의 근거 기록을 추가했습니다.',
@@ -1207,7 +1222,8 @@ const PAST_PROJECTS = {
       past:{source:'PRJ-2021-03 · NLRP3 세포 평가 보고서.pdf', location:'p. 5 결과 · 부록 B 미첨부',
         excerpt:'실험 회차별 IL-1β 값의 편차가 관찰됐다. 회차별 대조군 원자료는 부록 B를 참조한다. 제공된 발췌본에는 부록이 포함되지 않았다.'},
       plan:{source:'CN-0611 · NLRP3 연구계획서 v2.pdf', location:'§ 4.4 결과 기록',
-        excerpt:'회차별 측정값과 대조군 요약값을 결과에 첨부한다.'},
+        design:{model:'microglia',endpoint:'il1b',measurement:'배양 상층액의 IL-1β · 회차별 대조군 대비 변화율'},
+        excerpt:'사람 iPSC 유래 미세아교세포에서 IL-1β 분비량을 회차별 대조군 대비 변화율로 기록한다. 회차별 측정값과 대조군 요약값을 결과에 첨부한다.'},
       observation:'회차별 IL-1β 측정값에 편차가 관찰됐습니다.',
       interpretation:'제공된 보고서에는 편차 원인에 대한 결론이 없습니다. 대조군 원자료는 미첨부 부록에 있습니다.',
       change:'현재 계획은 회차별 대조군 요약값을 결과에 함께 기록하도록 했습니다.',
@@ -1215,6 +1231,96 @@ const PAST_PROJECTS = {
     }
   ]
 };
+
+const PROJECT_MODELS = {
+  g2019s:'LRRK2 G2019S 마우스',
+  scn8a:'Scn8a N1768D/+ 마우스',
+  kindling:'편도체 kindling 랫드',
+  mptp:'MPTP 마우스',
+  microglia:'사람 iPSC 유래 미세아교세포'
+};
+const PROJECT_ENDPOINTS = {
+  rab10:'pRab10',
+  lipid:'글루코실세라마이드',
+  rotarod:'로타로드 낙하 지연시간',
+  seizureFrequency:'발작 빈도',
+  seizureDuration:'발작 지속시간',
+  il1b:'IL-1β 분비량'
+};
+
+/* Synthetic archived records with the experiment context needed for matching. */
+const RELATED_PROJECT_ARCHIVE = [
+  {targetId:'gba1', title:'파킨슨병 모델의 지질 지표 평가',
+    model:'g2019s', endpoint:'lipid', measurement:'선조체 지질량 · 대조군 대비 변화',
+    source:'PRJ-2018-06 · GBA1 모델 평가.pdf', location:'p. 6 모델 · p. 11 평가 지표',
+    excerpt:'G2019S 마우스 선조체에서 글루코실세라마이드 변화를 평가했다.',
+    caution:'같은 모델의 조직 선정과 대조군 기록을 참고할 수 있습니다. 과거 연구의 지질 변화량을 현재 계획의 다른 평가 지표와 해석하려면 두 지표를 연결하는 근거가 필요합니다.'},
+  {targetId:'gpr6', title:'운동 협응 평가 기록',
+    model:'mptp', endpoint:'rotarod', measurement:'고정 속도 로타로드 · 평가일 낙하까지의 시간',
+    source:'PRJ-2019-22 · GPR6 운동 행동 평가.pdf', location:'p. 8 평가 방법 · 표 3',
+    excerpt:'MPTP 마우스의 운동 행동을 고정 속도 로타로드에서 평가일 낙하까지의 시간으로 기록했다.',
+    caution:'같은 평가 지표의 집계 양식을 참고할 수 있습니다. 질환 모델, 로타로드 속도 설정, 기준 시점 보정이 다릅니다.'},
+  {targetId:'kcnq', title:'SCN8A 모델 발작 지속시간 검토',
+    model:'scn8a', endpoint:'seizureDuration', measurement:'자발 발작 1건당 지속시간 · 영상 판독',
+    source:'PRJ-2020-16 · Kv7.2/7.3 발작 판독.pdf', location:'p. 5 동물 모델 · p. 9 분석',
+    excerpt:'Scn8a N1768D/+ 마우스의 자발 발작을 영상으로 판독하고 개별 사건의 지속시간을 기록했다.',
+    caution:'같은 모델의 발작 판독 사례를 참고할 수 있습니다. 사건당 지속시간과 일정 기간의 발작 빈도는 서로 다른 지표입니다.'},
+  {targetId:'kcnq', title:'Kindling 모델의 발작 빈도 집계',
+    model:'kindling', endpoint:'seizureFrequency', measurement:'자극 후 운동성 발작 횟수 · 자극 세션 기준',
+    source:'PRJ-2022-04 · Kv7.2/7.3 발작 평가.pdf', location:'p. 4 모델 · p. 8 평가 지표',
+    excerpt:'편도체 kindling 랫드에서 자극 세션별 운동성 발작을 집계했다.',
+    caution:'같은 지표의 기록 방식을 참고할 수 있습니다. 랫드의 자극 유발 발작과 마우스의 자발 발작은 사건 정의와 빈도의 분모가 다릅니다.'},
+  {targetId:'trem2', title:'미세아교세포 염증 반응 평가',
+    model:'microglia', endpoint:'il1b', measurement:'배양 상층액의 IL-1β 농도 · 회차별 절대값',
+    source:'PRJ-2022-12 · TREM2 세포 반응 보고서.pdf', location:'p. 6 세포 모델 · p. 9 결과',
+    excerpt:'사람 iPSC 유래 미세아교세포의 배양 상층액에서 IL-1β 농도를 측정하고 회차별 절대값을 기록했다.',
+    caution:'같은 모델과 지표의 회차별 편차를 검토하는 데 참고할 수 있습니다. 절대 농도와 대조군 대비 변화율을 비교하려면 대조군 값과 정규화 기준을 확인해야 합니다.'}
+];
+
+function projectDesignFields(design) {
+  return `<div><dt>모델</dt><dd>${PROJECT_MODELS[design.model]}</dd></div>
+    <div><dt>평가 지표</dt><dd>${PROJECT_ENDPOINTS[design.endpoint]}</dd></div>
+    <div><dt>측정 조건</dt><dd>${design.measurement}</dd></div>`;
+}
+
+function renderRelatedProjects(design) {
+  const matches = RELATED_PROJECT_ARCHIVE.filter(record => record.targetId !== cur.id)
+    .map(record => ({record, model:record.model === design.model, endpoint:record.endpoint === design.endpoint}))
+    .filter(match => match.model || match.endpoint)
+    .sort((a,b) => (Number(b.model)+Number(b.endpoint))-(Number(a.model)+Number(a.endpoint)));
+
+  const filters = document.querySelectorAll('#relatedProjectFilters button');
+  const results = $('relatedProjectResults');
+  const renderMatches = filter => {
+    const visible = filter === 'all' ? matches : matches.filter(match => match[filter]);
+    $('relatedProjectCount').textContent = `${visible.length}건`;
+    results.innerHTML = visible.map(({record,model,endpoint}) => {
+      const reason = [
+        model ? `같은 모델 · ${PROJECT_MODELS[record.model]}` : '',
+        endpoint ? `같은 평가 지표 · ${PROJECT_ENDPOINTS[record.endpoint]}` : ''
+      ].filter(Boolean);
+      const differences = [
+        !model && `모델 · 현재 ${PROJECT_MODELS[design.model]} / 과거 ${PROJECT_MODELS[record.model]}`,
+        !endpoint && `평가 지표 · 현재 ${PROJECT_ENDPOINTS[design.endpoint]} / 과거 ${PROJECT_ENDPOINTS[record.endpoint]}`,
+        design.measurement !== record.measurement && `측정 조건 · 현재 ${design.measurement} / 과거 ${record.measurement}`
+      ].filter(Boolean);
+      return `<article class="rd-evidence related-project">
+        <div><span class="pill">${T(record.targetId).sym}</span></div>
+        <h4>${record.title}</h4>
+        <div class="related-project-reasons">${reason.map(text=>`<span class="tag rd">${text}</span>`).join('')}</div>
+        ${differences.length ? `<ul class="related-project-differences">${differences.map(text=>`<li>${text}</li>`).join('')}</ul>` : ''}
+        <p><b>비교 시 주의할 점</b> · ${record.caution}</p>
+        ${pastSource(record)}
+      </article>`;
+    }).join('') || '<p class="sub">이 조건에 맞는 다른 타겟의 과거 기록이 없습니다.</p>';
+  };
+  filters.forEach(button => button.addEventListener('click', () => {
+    filters.forEach(filter => filter.setAttribute('aria-pressed', String(filter === button)));
+    renderMatches(button.dataset.match);
+  }));
+  renderMatches('all');
+}
+
 const PAST_PROJECT_STATUS = {
   partial:{label:'일부 반영', style:'watch'},
   included:{label:'계획에 반영', style:'ok'},
@@ -1260,11 +1366,25 @@ function renderPastCase(item) {
     </article>
     <article class="card rd-evidence rd-external">
       <p class="eyebrow">현재 계획서</p>
-      <dl><div><dt>현재 계획의 변경점</dt><dd>${item.change}</dd></div></dl>
+      <dl><div><dt>현재 계획의 변경점</dt><dd>${item.change}</dd></div>
+        ${projectDesignFields(item.plan.design)}</dl>
       ${pastSource(item.plan)}
     </article>
   </div>
+  <section class="card related-projects" aria-labelledby="relatedProjectTitle">
+    <div class="related-project-head"><div>
+      <h3 id="relatedProjectTitle">다른 타겟의 관련 과거 프로젝트</h3>
+      <p class="sub">현재 계획과 모델 또는 평가 지표가 일치하는 합성 기록입니다.</p>
+    </div><span class="sub" id="relatedProjectCount" role="status"></span></div>
+    <div id="relatedProjectFilters" class="filters" role="group" aria-label="관련 프로젝트 검색 조건">
+      <button type="button" data-match="all" aria-pressed="true">전체</button>
+      <button type="button" data-match="model" aria-pressed="false">같은 모델</button>
+      <button type="button" data-match="endpoint" aria-pressed="false">같은 평가 지표</button>
+    </div>
+    <div id="relatedProjectResults"></div>
+  </section>
   ${rdNoteForm('남은 질문', '두 문서 출처와 함께 저장')}`;
+  renderRelatedProjects(item.plan.design);
   bindRDNote({mode:'compare',questionId:item.id,next:item.next,sources:[item.past,item.plan]});
 }
 
