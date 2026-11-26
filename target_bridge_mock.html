@@ -370,6 +370,30 @@ tbody tr.active{background:var(--teal-soft)}
 .asset-gap-search select{font:inherit;width:100%;min-width:0;padding:8px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
 .asset-precedent-results{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:12px}
 
+
+.rd-toolbar{position:sticky;top:0;z-index:20;padding:8px 0 10px;background:var(--bg);border-bottom:1px solid var(--line);margin-bottom:14px}
+.rd-toolbar .rd-modes{margin-bottom:7px}
+.rd-context-bar{display:flex;align-items:center;justify-content:space-between;gap:8px 16px;padding:9px 12px;background:#e7f2f1;border:1px solid #cee3e0;border-radius:11px}
+.rd-context-bar strong{display:block;color:#205c56;font-size:13px}
+.rd-context-bar p{margin:2px 0 0;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden}
+.rd-context-actions{display:flex;gap:6px;flex-wrap:wrap;flex-shrink:0}
+#tab-rd [tabindex="-1"],#tab-rd input,#tab-rd textarea,#tab-rd button,#tab-rd .rd-saved-note{scroll-margin-top:calc(var(--rd-toolbar-height, 124px) + 12px)}
+@media(max-width:680px){
+  .rd-toolbar{padding-top:5px}
+  .rd-toolbar .rd-modes button{padding:5px 8px;font-size:12px}
+  .rd-context-bar{display:grid;grid-template-columns:minmax(0,1fr);gap:3px;padding:6px 8px}
+  .rd-context-bar strong{font-size:12px}
+  .rd-context-bar p{font-size:13px;line-height:1.3}
+  .rd-context-actions .btn{padding:4px 8px}
+}
+
+
+.precedent-overview,.rd-disclosure[open]{display:grid;gap:10px}
+.rd-disclosure>summary{font-weight:700;color:#205c56;cursor:pointer}
+.rd-disclosure[open]>summary{margin-bottom:9px}
+.selected-project-comparison .rd-disclosure{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#fff}
+.rd-case-detail{min-width:0}
+
 </style>
 </head>
 <body>
@@ -813,16 +837,95 @@ function renderMarket(){
 }
 
 /* ---------- R&D tab ---------- */
+
+const rdWorkContext = new Map();
+const rdToolbarObserver = new ResizeObserver(([entry]) => updateRDToolbarHeight(entry.target));
+
+function updateRDToolbarHeight(bar) {
+  $('tab-rd').style.setProperty('--rd-toolbar-height',bar.getBoundingClientRect().height+'px');
+}
+
+function setRDWorkContext(changes) {
+  rdWorkContext.set(cur.id,{...rdWorkContext.get(cur.id),...changes});
+  refreshRDToolbar();
+}
+
+function focusRDSection(id) {
+  const element = $(id);
+  if (!element) return;
+  for (let parent=element.parentElement; parent; parent=parent.parentElement) {
+    if (parent.tagName==='DETAILS') parent.open = true;
+  }
+  updateRDToolbarHeight($('rdToolbar'));
+  element.scrollIntoView({block:'start'});
+  element.focus({preventScroll:true});
+}
+
+function refreshRDToolbar() {
+  if (!$('rdActiveContext')) return;
+  const context = rdWorkContext.get(cur.id) || {};
+  const asset = assetEvidenceSelection.get(cur.id);
+  const code = context.code || asset?.code || cur.assets[0];
+  const area = context.area || (asset?.code===code ? asset.area : undefined);
+  const label = ASSET_EVIDENCE_AREAS[area]?.label;
+  $('rdActiveContext').textContent = [cur.sym,code,label].filter(Boolean).join(' / ');
+  const question = context.question || $('rdQuestion')?.selectedOptions[0]?.textContent ||
+    $('pastCase')?.selectedOptions[0]?.textContent ||
+    document.querySelector(`.rd-saved-note[data-target="${cur.id}"] .rd-saved-text`)?.textContent ||
+    (rdMode==='stack' ? $('rdNoteText')?.value : '');
+  $('rdActiveQuestion').textContent = question || '검토 질문을 선택하세요.';
+  const back = $('rdContextBack');
+  back.classList.toggle('hidden',rdMode!=='compare' || !area);
+  back.onclick = () => {
+    assetGapSearch = null;
+    openAssetReview(cur.id,code+':'+area);
+  };
+  let action;
+  if (rdMode==='stack') {
+    action = area
+      ? ['과거 선례 찾기',()=>openAssetGapSearch(code,area)]
+      : ['검토할 공백 선택',()=>focusRDSection('firstAssetGap')];
+  } else if (rdMode==='notes') {
+    action = ['검토 결과 기록',()=>{
+      const cards = [...$('rdSavedNotes').querySelectorAll('.rd-saved-note')];
+      const relevant = cards.find(card=>card.dataset.target===cur.id &&
+        card.querySelector('.rd-saved-text').textContent===context.question) ||
+        cards.find(card=>card.dataset.target===cur.id);
+      if (relevant) {
+        relevant.scrollIntoView({block:'start'});
+        relevant.querySelector('.rd-review-form select').focus({preventScroll:true});
+      } else focusRDSection('rdNotesTitle');
+    }];
+  } else if (rdMode==='evidence') {
+    action = ['리뷰 질문 작성',()=>focusRDSection('rdNoteText')];
+  } else {
+    const destination = $('assetPrecedentsResultsTitle') ? 'assetPrecedentsResultsTitle' :
+      $('projectReuseTitle') ? 'projectReuseTitle' : $('relatedProjectTitle') ? 'relatedProjectTitle' : 'pastProjectsTitle';
+    const labels = {assetPrecedentsResultsTitle:'관련 선례 보기',projectReuseTitle:'판단 기록',relatedProjectTitle:'선례 선택',pastProjectsTitle:'검토 사례 보기'};
+    action = [labels[destination],()=>focusRDSection(destination)];
+  }
+  const next = $('rdContextAction');
+  [next.textContent,next.onclick] = action;
+}
+
 function renderRD(){
   const modes=[['evidence','Evidence Review'],['notes','Saved Review Questions'],['stack','Asset Evidence'],['compare','Compare with past project']];
   const seg=`<div class="seg rd-modes" aria-label="R&D Analysis">${modes.map(([mode,label]) =>
     `<button aria-pressed="${rdMode===mode}" class="${rdMode===mode?'on':''}" onclick="rdMode='${mode}';renderRD();document.querySelector('.rd-modes [aria-pressed=true]').focus()">${label}</button>`).join('')}</div>`;
-  $('tab-rd').innerHTML=seg;
+  $('tab-rd').innerHTML=`<div class="rd-toolbar" id="rdToolbar">${seg}
+    <section class="rd-context-bar" aria-label="현재 검토 맥락">
+      <div><strong id="rdActiveContext"></strong><p id="rdActiveQuestion"></p></div>
+      <div class="rd-context-actions"><button class="btn ghost compact hidden" type="button" id="rdContextBack">← 자산 근거</button>
+        <button class="btn primary compact" type="button" id="rdContextAction"></button></div>
+    </section></div>`;
+  rdToolbarObserver.disconnect();
+  rdToolbarObserver.observe($('rdToolbar'));
   if(rdMode==='evidence')renderRDEvidence();
   else if(rdMode==='notes')renderRDNotes();
   else if(rdMode==='stack')renderAssetEvidence();
   else if(assetGapSearch?.targetId===cur.id)renderAssetGapSearch();
   else renderPastProjects();
+  refreshRDToolbar();
 }
 
 /* =====================================================================
@@ -1733,6 +1836,8 @@ function openAssetGapSearch(code, area) {
 function renderAssetGapSearch() {
   const {code,area:key} = assetGapSearch;
   const area = assetEvidence(cur,code).find(item=>item.id===key);
+  const context = rdWorkContext.get(cur.id);
+  if (context?.code!==code || context?.area!==key) setRDWorkContext({code,area:key,question:area.question});
   const study = area.study;
   $('tab-rd').insertAdjacentHTML('beforeend', `<section class="rd-review asset-gap-search" lang="ko">
     <div class="card asset-gap-context">
@@ -1744,7 +1849,7 @@ function renderAssetGapSearch() {
       ${pastSource(study?.document || area.inventory)}
     </div>
     <section class="card related-projects" aria-labelledby="assetPrecedentsResultsTitle">
-      <div class="related-project-head"><h3 id="assetPrecedentsResultsTitle">관련 과거 프로젝트</h3><span id="assetPrecedentCount" class="sub" role="status"></span></div>
+      <div class="related-project-head"><h3 id="assetPrecedentsResultsTitle" tabindex="-1">관련 과거 프로젝트</h3><span id="assetPrecedentCount" class="sub" role="status"></span></div>
       ${study
         ? `<p class="sub">자산 보고서의 검색 기준 · ${study.model} / ${study.endpoint}</p>`
         : `<label for="assetPrecedentBasis">검색 기준 선택
@@ -1852,8 +1957,10 @@ function renderRelatedProjects(item) {
     updateButtons();
     recommendations = projectReviewRecommendations(item.plan, active);
     const updatePlan = () => renderPlanActionSummary(item, chosen);
+    renderPrecedentOverview(item,chosen);
     renderSelectedProject(item, chosen, active, recommendations, applied, updatePlan);
     updatePlan();
+    refreshRDToolbar();
     paintReviewGuide($('rdSelectedGuide'), applied);
   };
   results.addEventListener('click', event => {
@@ -1865,7 +1972,7 @@ function renderRelatedProjects(item) {
     else if (record && chosen.length < 2) chosen.push(record);
     const next = chosen.includes(active) ? active : chosen[0];
     updateSelection(next);
-    if (index < 0) $('selectedProjectTitle')?.focus();
+    if (index < 0) focusRDSection('precedentOverviewTitle');
   });
   const comparison = $('selectedProjectComparison');
   comparison.addEventListener('click', event => {
@@ -1874,6 +1981,7 @@ function renderRelatedProjects(item) {
       applied = recommendations.find(item => item.id === promptButton.dataset.prompt);
       const editor = $('rdNoteText');
       editor.value = applied.question;
+      setRDWorkContext({question:applied.question});
       $('rdOpenSaved').classList.add('hidden');
       paintReviewGuide($('rdSelectedGuide'), applied);
       $('rdSaveStatus').textContent = '추천 질문을 편집란에 넣었습니다. 수정한 뒤 출처와 함께 저장할 수 있습니다.';
@@ -1934,12 +2042,29 @@ function precedentSynthesis(records, design) {
       ${comparisons.length ? `<p>${complementary
           ? '현재 계획과 같은 모델을 쓴 보고서는 판독·기록 조건을, 같은 지표를 쓴 보고서는 지표의 정의와 집계 조건을 검토하는 데 쓰입니다. 두 선례의 결과 수치를 직접 비교하려면 모델과 지표의 차이를 먼저 해소해야 합니다.'
           : '재사용할 기록·판독 절차와 결과 수치의 비교 가능성을 각각 검토하세요.'}</p>
-        <ul class="related-project-differences">${comparisons.map(([label,a,b]) => `<li><b>${label}</b> · 선례 1 ${a} / 선례 2 ${b}</li>`).join('')}</ul>`
+        `
         : '<p>기록된 설계 조건은 같습니다. 해석이 일치하는지는 대조군, 원자료, 판정 기준을 확인해야 합니다.</p>'}
     </div>
   </section>`;
 }
 
+
+
+function renderPrecedentOverview(project, records) {
+  const overview = $('precedentOverview');
+  const record = records[0];
+  const insight = records.length === 2
+    ? precedentSynthesis(records, project.plan.design)
+    : record ? `<div class="related-project rd-evidence">
+        <h4>${record.title}</h4><p>${record.support}</p>
+        ${pastSource({source:record.source,location:record.procedure.location,excerpt:record.procedure.excerpt})}
+      </div>`
+      : '<p class="sub">과거 프로젝트를 선택하면 여기에서 판단 근거와 해석의 차이를 먼저 볼 수 있습니다.</p>';
+  overview.innerHTML = `<div class="related-project-head">
+    <h3 id="precedentOverviewTitle" tabindex="-1">핵심 판단</h3>
+    <button type="button" class="btn ghost compact" onclick="focusRDSection('relatedProjectTitle')">${record?'선례 다시 선택':'선례 선택'}</button>
+  </div>${insight}`;
+}
 
 function renderSelectedProject(item, records, active, recommendations, applied, onDecisionSaved) {
   const container = $('selectedProjectComparison');
@@ -1954,11 +2079,14 @@ function renderSelectedProject(item, records, active, recommendations, applied, 
     return;
   }
   const plan = item.plan;
+  const open = new Set([...container.querySelectorAll('.rd-disclosure[open]')].map(detail=>detail.id));
   container.innerHTML = `<div class="related-project-head">
     <h3 id="selectedProjectTitle" tabindex="-1">현재 계획과 선택한 프로젝트 비교</h3>
-    <button type="button" class="btn ghost compact" onclick="$('planActionTitle').focus()">계획 반영·추가 확인 보기</button>
+    <button type="button" class="btn ghost compact" onclick="focusRDSection('planActionTitle')">계획 반영·추가 확인 보기</button>
     <button type="button" class="btn ghost compact" id="clearProjectReference">${records.length===2 ? '두 선례 선택 해제' : '참고 선택 해제'}</button>
   </div>
+  <details class="rd-disclosure" id="precedentDetails" ${open.has('precedentDetails')?'open':''}>
+    <summary id="precedentDetailsToggle">모델·지표 상세 비교 및 보고서 발췌</summary>
   <div class="precedent-grid ${records.length===1?'single':''}">
     <article class="rd-evidence related-project">
       <p class="eyebrow">현재 계획 · ${cur.sym}</p>
@@ -1973,13 +2101,19 @@ function renderSelectedProject(item, records, active, recommendations, applied, 
       ${pastSource(record)}
     </article>`).join('')}
   </div>
-  ${records.length===2 ? precedentSynthesis(records, plan.design) : `<p><b>해석할 때 확인할 점</b> · ${active.caution}</p>`}
+  ${records.length===2 ? `<ul class="related-project-differences">${projectPrecedentDifferences(records).map(([label,a,b])=>`<li><b>${label}</b> · 선례 1 ${a} / 선례 2 ${b}</li>`).join('')}</ul>`
+    : `<p><b>해석할 때 확인할 점</b> · ${active.caution}</p>`}
+  </details>
   ${records.length===2 ? `<div class="precedent-focus"><p><b>항목별 판단과 추천 질문에 사용할 보고서</b></p>
     <div class="filters" role="group" aria-label="검토에 사용할 보고서">${records.map((record,index) => `<button type="button"
       class="${active===record?'on':''}" data-active-reference="${record.id}" aria-pressed="${active===record}">선례 ${index+1} · ${record.id}</button>`).join('')}</div>
   </div>` : ''}
-  ${projectReuseHTML(projectReuseItems(plan.design, active),active)}
-  ${projectRecommendationsHTML(recommendations, applied)}`;
+  <details class="rd-disclosure" id="reuseDetails" ${open.has('reuseDetails')?'open':''}>
+    <summary>항목별 재사용 판단 기록</summary>${projectReuseHTML(projectReuseItems(plan.design, active),active)}
+  </details>
+  <details class="rd-disclosure" id="promptDetails" ${open.has('promptDetails')?'open':''}>
+    <summary>추천 질문 보기</summary>${projectRecommendationsHTML(recommendations, applied)}
+  </details>`;
   bindReuseDecisions(container, item, active, onDecisionSaved);
 }
 
@@ -2006,30 +2140,24 @@ function openReviewStep(step) {
   }
   if (step==='question' && !$('projectPromptsTitle')) {
     $('relatedProjectHint').textContent = '추천 질문을 보려면 먼저 아래의 과거 프로젝트를 선택하세요.';
-    $('relatedProjectTitle').focus();
+    focusRDSection('relatedProjectTitle');
     return;
   }
   const destinations = {references:'relatedProjectTitle',question:'projectPromptsTitle',editor:'rdNoteText'};
-  $(destinations[step])?.focus();
+  focusRDSection(destinations[step]);
 }
 
 function renderPastProjects() {
   const cases = PAST_PROJECTS[cur.id] || [];
   $('tab-rd').insertAdjacentHTML('beforeend', `<section class="rd-review" lang="ko">
     <div class="rd-question card">
-      <div><h2>${cur.sym} 과거 프로젝트 검토</h2><p class="sub">과거 보고서와 현재 계획서를 대조하는 합성 사례입니다.</p></div>
+      <div><h2 id="pastProjectsTitle" tabindex="-1">${cur.sym} 과거 프로젝트 검토</h2><p class="sub">과거 보고서와 현재 계획서를 대조하는 합성 사례입니다.</p></div>
       ${cases.length ? `<label for="pastCase">검토할 사례
         <select id="pastCase">${cases.map(item=>`<option value="${item.id}">${item.title}</option>`).join('')}</select>
       </label>` : ''}
       <nav class="rd-example-links" aria-label="과거 프로젝트 사례가 있는 타겟">${Object.keys(PAST_PROJECTS).map(id=>
         `<button type="button" class="btn ghost compact" onclick="openPastReview('${id}')" ${cur.id===id?'aria-current="true"':''}>${T(id).sym}</button>`).join('')}</nav>
     </div>
-    ${cases.length ? `<nav aria-label="과거 프로젝트 검토 바로가기"><ol class="rd-workflow">
-      <li><button type="button" onclick="openReviewStep('references')">참고 프로젝트 선택 및 항목별 판단</button></li>
-      <li><button type="button" onclick="openReviewStep('question')">추천 질문 선택</button></li>
-      <li><button type="button" onclick="openReviewStep('editor')">질문 편집 및 저장</button></li>
-      <li><button type="button" onclick="openReviewStep('outcomes')">저장한 질문에서 결과 기록</button></li>
-    </ol></nav>` : ''}
     <div id="pastReviewContent">${cases.length?'':'<section class="card"><h3>연결된 과거 프로젝트 사례가 없습니다</h3><p class="sub">위 타겟에서 과거 보고서와 현재 계획서를 비교할 수 있습니다.</p></section>'}</div>
   </section>`);
   if (!cases.length) return;
@@ -2039,13 +2167,31 @@ function renderPastProjects() {
     pastSelection.set(cur.id, select.value);
     renderPastCase(cases.find(item=>item.id===select.value));
   }
-  select.addEventListener('change', showCase);
+  select.addEventListener('change', () => {
+    setRDWorkContext({question:select.selectedOptions[0].textContent});
+    showCase();
+  });
   showCase();
 }
 
 function renderPastCase(item) {
   const status = PAST_PROJECT_STATUS[item.status];
-  $('pastReviewContent').innerHTML = `<section class="card rd-assessment past-assessment" data-status="${item.status}">
+  $('pastReviewContent').innerHTML = `<section class="card precedent-overview" id="precedentOverview"></section>
+  <section class="card plan-action-summary" aria-labelledby="planActionTitle">
+    <div><h3 id="planActionTitle" tabindex="-1">계획 반영·추가 확인</h3>
+      <p class="sub" id="planActionStatus" role="status"></p></div>
+    <div class="rd-pair"><div class="plan-action-column" data-plan-kind="change"></div>
+      <div class="plan-action-column" data-plan-kind="check"></div></div>
+    <details class="plan-action-saved" open><summary id="savedPlanActionCount"></summary><div id="savedPlanActions"></div></details>
+  </section>
+  <nav aria-label="과거 프로젝트 검토 바로가기"><ol class="rd-workflow">
+      <li><button type="button" onclick="openReviewStep('references')">참고 프로젝트 선택 및 항목별 판단</button></li>
+      <li><button type="button" onclick="openReviewStep('question')">추천 질문 선택</button></li>
+      <li><button type="button" onclick="openReviewStep('editor')">질문 편집 및 저장</button></li>
+      <li><button type="button" onclick="openReviewStep('outcomes')">저장한 질문에서 결과 기록</button></li>
+    </ol></nav>
+  <details class="card rd-disclosure rd-case-detail"><summary>기존 과거 보고서와 현재 계획의 상세 배경</summary>
+  <section class="card rd-assessment past-assessment" data-status="${item.status}">
     <h3><span class="st ${status.style}">${status.label}</span></h3><p>${item.summary}</p>
   </section>
   <div class="rd-pair">
@@ -2062,6 +2208,7 @@ function renderPastCase(item) {
       ${pastSource(item.plan)}
     </article>
   </div>
+  </details>
   <section class="card related-projects" aria-labelledby="relatedProjectTitle">
     <div class="related-project-head"><div>
       <h3 id="relatedProjectTitle" tabindex="-1">1. 참고 프로젝트 선택</h3>
@@ -2073,18 +2220,11 @@ function renderPastCase(item) {
       <button type="button" data-match="endpoint" aria-pressed="false">같은 평가 지표</button>
     </div>
     <div class="rd-note-actions"><p class="sub" id="relatedProjectSelection" role="status"></p>
-      <button type="button" class="btn ghost compact hidden" id="jumpProjectReuse" onclick="$('projectReuseTitle').focus()">항목별 판단으로 이동</button>
+      <button type="button" class="btn ghost compact hidden" id="jumpProjectReuse" onclick="focusRDSection('projectReuseTitle')">항목별 판단으로 이동</button>
     </div>
     <div id="relatedProjectResults"></div>
   </section>
   <section class="card selected-project-comparison hidden" id="selectedProjectComparison" aria-labelledby="selectedProjectTitle"></section>
-  <section class="card plan-action-summary" aria-labelledby="planActionTitle">
-    <div><h3 id="planActionTitle" tabindex="-1">계획 반영·추가 확인</h3>
-      <p class="sub" id="planActionStatus" role="status"></p></div>
-    <div class="rd-pair"><div class="plan-action-column" data-plan-kind="change"></div>
-      <div class="plan-action-column" data-plan-kind="check"></div></div>
-    <details class="plan-action-saved" open><summary id="savedPlanActionCount"></summary><div id="savedPlanActions"></div></details>
-  </section>
   ${rdNoteForm('3. 리뷰 질문 편집', '질문과 출처 저장')}`;
   const getReviewContext = renderRelatedProjects(item);
   bindRDNote({mode:'compare',questionId:item.id,next:item.next,sources:[item.past,item.plan],getReviewContext});
@@ -2106,7 +2246,7 @@ function openPastReview(targetId, caseId, referenceId, referenceIds=[]) {
   }
   rdMode = 'compare';
   openTarget(targetId, 'rd');
-  ($('selectedProjectTitle') || $('pastCase'))?.focus();
+  focusRDSection($('precedentOverviewTitle') ? 'precedentOverviewTitle' : 'pastCase');
 }
 
 
@@ -2209,7 +2349,10 @@ function renderAssetEvidence() {
   </section>`);
   const select = $('rdAssetSelect');
   select.value = previous?.code || cur.assets[0];
-  select.addEventListener('change',() => setAssetEvidence(select.value));
+  select.addEventListener('change',() => {
+    setRDWorkContext({code:select.value,area:undefined,question:undefined});
+    setAssetEvidence(select.value);
+  });
   setAssetEvidence(select.value, previous?.area);
 }
 
@@ -2229,7 +2372,7 @@ function setAssetEvidence(code, selectedArea) {
     ${pastSource(area.study?.document || area.inventory)}
     <div class="asset-gap"><p class="eyebrow">확인할 공백</p><p>${area.question}</p></div>
     <div class="rd-note-actions">
-      <button type="button" class="btn ghost compact" data-asset-gap="${area.id}" aria-controls="assetGapEditor"
+      <button type="button" class="btn ghost compact" ${area.id==='pk'?'id="firstAssetGap"':''} data-asset-gap="${area.id}" aria-controls="assetGapEditor"
         aria-pressed="false">리뷰 질문으로 작성</button>
       <button type="button" class="btn ghost compact" data-asset-precedents="${area.id}">Compare with past project</button>
     </div>
@@ -2251,6 +2394,7 @@ function setAssetEvidence(code, selectedArea) {
   document.querySelectorAll('[data-asset-gap]').forEach(button => {
     button.addEventListener('click',() => {
       const area = evidence.find(item=>item.id===button.dataset.assetGap);
+      setRDWorkContext({code,area:area.id,question:area.question});
       renderAssetGap(code,area);
       $('rdNoteText').focus();
     });
@@ -2278,7 +2422,12 @@ function renderAssetGap(code, area) {
 
 function openAssetReview(targetId, questionId) {
   const selection = assetGapSelection(T(targetId),questionId);
-  if (selection) assetEvidenceSelection.set(targetId,selection);
+  if (selection) {
+    assetEvidenceSelection.set(targetId,selection);
+    const context = rdWorkContext.get(targetId);
+    const question = assetEvidence(T(targetId),selection.code).find(item=>item.id===selection.area).question;
+    rdWorkContext.set(targetId,{...selection,question:context?.code===selection.code && context.area===selection.area ? context.question || question : question});
+  }
   rdMode = 'stack';
   openTarget(targetId,'rd');
   ($('rdNoteText') || $('assetEvidenceTitle')).focus();
@@ -2346,6 +2495,7 @@ function renderRDEvidence() {
   select.value = rdSelection.get(cur.id) || questions[0].id;
   select.addEventListener('change', () => {
     rdSelection.set(cur.id, select.value);
+    setRDWorkContext({question:select.selectedOptions[0].textContent});
     renderRDComparison();
   });
   renderRDComparison();
@@ -2385,6 +2535,7 @@ function bindRDNote({mode,questionId,next,sources,getReviewContext}) {
   input.value = next;
   const openSaved = $('rdOpenSaved');
   input.addEventListener('input', () => {
+    setRDWorkContext({question:input.value.trim()});
     openSaved.classList.add('hidden');
     $('rdSaveStatus').textContent = '';
   });
@@ -2446,9 +2597,12 @@ function persistRDNotes() {
 }
 
 function openSavedReview(note) {
+  setRDWorkContext({...assetGapSelection(cur,note.questionId),question:note.text});
   rdMode = 'notes';
   renderRD();
-  $('rdSavedNotes').children[rdNotes.indexOf(note)]?.querySelector('.rd-review-form select').focus();
+  const card = $('rdSavedNotes').children[rdNotes.indexOf(note)];
+  card?.scrollIntoView({block:'start'});
+  card?.querySelector('.rd-review-form select').focus({preventScroll:true});
 }
 
 function reviewOutcomeForm() {
@@ -2513,7 +2667,7 @@ function renderRDNotes() {
     const asset = note.mode === 'stack' && assetGapSelection(target,note.questionId);
     const openLabel = past ? '과거 프로젝트 비교 열기' : asset ? '자산 근거 열기' : '근거 비교 열기';
     const sourceLabels = past ? ['과거 보고서','현재 계획서'] : asset ? ['자산 보고서','자료 인덱스'] : ['내부','외부'];
-    return `<article class="rd-saved-note">
+    return `<article class="rd-saved-note" data-target="${target.id}">
       <div class="rd-saved-summary">
         <div class="rd-saved-heading"><span class="pill">${target.sym}${asset ? ' · '+asset.code+' · '+ASSET_EVIDENCE_AREAS[asset.area].label : ''}</span><span class="pill review-status"></span></div>
         <button class="btn ghost compact rd-open-comparison">${openLabel}</button>
@@ -2530,6 +2684,8 @@ function renderRDNotes() {
   $('rdSavedNotes').querySelectorAll('.rd-saved-note').forEach((article,index) => {
     const note = rdNotes[index];
     article.querySelector('.rd-open-comparison').addEventListener('click', () => {
+      const target = T(note.targetId);
+      rdWorkContext.set(target.id,{...rdWorkContext.get(target.id),...assetGapSelection(target,note.questionId),question:note.text});
       if (note.mode === 'compare') openPastReview(note.targetId,note.questionId,note.referenceId,noteReferenceIds(note));
       else if (note.mode === 'stack') openAssetReview(note.targetId,note.questionId);
       else openRDReview(note.targetId,note.questionId);
@@ -2574,8 +2730,14 @@ const linkedTarget=demoParams.get('target');
 if(demoParams.get('view')==='rd' && T(linkedTarget)){
   if(demoParams.get('mode')==='compare' || location.hash==='#relatedProjectTitle'){
     rdMode='compare';
-    const assetGap=assetGapSelection(T(linkedTarget),demoParams.get('asset')+':'+demoParams.get('gap'));
-    if (assetGap) assetGapSearch={targetId:linkedTarget,...assetGap};
+    const target=T(linkedTarget);
+    const assetGap=assetGapSelection(target,demoParams.get('asset')+':'+demoParams.get('gap'));
+    if (assetGap) {
+      const question=assetEvidence(target,assetGap.code).find(item=>item.id===assetGap.area).question;
+      assetEvidenceSelection.set(linkedTarget,assetGap);
+      rdWorkContext.set(linkedTarget,{...assetGap,question});
+      if (!demoParams.has('reference')) assetGapSearch={targetId:linkedTarget,...assetGap};
+    }
     const cases=PAST_PROJECTS[linkedTarget] || [];
     const project=cases.find(item=>item.id===demoParams.get('case')) || cases[0];
     const ids=demoParams.getAll('reference');
@@ -2593,10 +2755,11 @@ if(demoParams.get('view')==='rd' && T(linkedTarget)){
   }
   openTarget(linkedTarget,'rd');
   const section=demoParams.get('section');
-  const headings={reuse:'projectReuseTitle',precedents:'selectedProjectTitle',plan:'planActionTitle'};
+  const headings={reuse:'projectReuseTitle',precedents:'precedentDetailsToggle',plan:'planActionTitle',overview:'precedentOverviewTitle'};
   const heading=assetGapSearch ? 'assetPrecedentsTitle' : rdMode==='stack' ? ($('rdNoteText') ? 'rdNoteText' : 'assetEvidenceTitle') :
-    location.hash==='#relatedProjectTitle' ? 'relatedProjectTitle' : headings[section] || 'projectPromptsTitle';
-  $(heading)?.focus();
+    location.hash==='#relatedProjectTitle' ? 'relatedProjectTitle' : headings[section] || (rdMode==='compare'?'precedentOverviewTitle':null);
+  if (section==='precedents' && $('precedentDetails')) $('precedentDetails').open = true;
+  focusRDSection(heading);
 }
 </script>
 </body>
