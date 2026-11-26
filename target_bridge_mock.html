@@ -337,6 +337,13 @@ tbody tr.active{background:var(--teal-soft)}
 .reuse-form select,.reuse-form textarea{font:inherit;width:100%;min-width:0;padding:8px;border:1px solid var(--line);border-radius:8px;background:white;color:var(--ink)}
 .reuse-form textarea{resize:vertical}
 
+.precedent-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.precedent-grid.single{grid-template-columns:repeat(2,minmax(0,1fr))}
+.precedent-synthesis,.precedent-focus{display:grid;gap:9px}
+.precedent-divergence{display:grid;gap:6px;padding:12px;border-radius:10px;background:var(--amber-soft)}
+.precedent-focus{padding:10px 0;border-top:1px solid var(--line)}
+#rdReferenceSource{white-space:pre-line}
+@media(max-width:760px){.precedent-grid,.precedent-grid.single{grid-template-columns:minmax(0,1fr)}}
 </style>
 </head>
 <body>
@@ -1295,30 +1302,35 @@ const RELATED_PROJECT_ARCHIVE = [
   {id:'PRJ-2018-06',targetId:'gba1', title:'파킨슨병 모델의 지질 지표 평가',
     model:'g2019s', endpoint:'lipid', measurement:'선조체 지질량 · 대조군 대비 변화',
     source:'PRJ-2018-06 · GBA1 모델 평가.pdf', location:'p. 6 모델 · p. 11 평가 지표',
+    support:'같은 G2019S 모델에서 검체와 대조군을 짝지어 기록한 표를 참고할 수 있습니다.',
     excerpt:'G2019S 마우스 선조체에서 글루코실세라마이드 변화를 평가했다.',
     procedure:{location:'p. 11 평가 지표 · 표 2',excerpt:'검체 ID와 대조군 ID를 개별 결과 행에 기재했다.',reason:'검체와 대조군을 짝지어 기록하는 표 형식은 현재 지표에도 적용할 수 있습니다.',portable:true},
     caution:'같은 모델의 조직 선정과 대조군 기록을 참고할 수 있습니다. 과거 연구의 지질 변화량을 현재 계획의 다른 평가 지표와 해석하려면 두 지표를 연결하는 근거가 필요합니다.'},
   {id:'PRJ-2019-22',targetId:'gpr6', title:'운동 협응 평가 기록',
     model:'mptp', endpoint:'rotarod', measurement:'고정 속도 로타로드 · 평가일 낙하까지의 시간',
     source:'PRJ-2019-22 · GPR6 운동 행동 평가.pdf', location:'p. 8 평가 방법 · 표 3',
+    support:'로타로드 낙하 지연시간의 기록 항목과 결과표 형식을 검토하는 선례입니다.',
     excerpt:'MPTP 마우스의 운동 행동을 고정 속도 로타로드에서 평가일 낙하까지의 시간으로 기록했다.',
     procedure:{location:'p. 8 평가 방법',excerpt:'고정 속도에서 평가일의 낙하 시간만 기록했다.',reason:'기록 항목을 참고할 수 있습니다. 현재 계획의 가속 방식과 개체별 기준값 보정을 반영해야 합니다.',portable:false},
     caution:'같은 평가 지표의 집계 양식을 참고할 수 있습니다. 질환 모델, 로타로드 속도 설정, 기준 시점 보정이 다릅니다.'},
   {id:'PRJ-2020-16',targetId:'kcnq', title:'SCN8A 모델 발작 지속시간 검토',
     model:'scn8a', endpoint:'seizureDuration', measurement:'자발 발작 1건당 지속시간 · 영상 판독',
     source:'PRJ-2020-16 · Kv7.2/7.3 발작 판독.pdf', location:'p. 5 동물 모델 · p. 9 분석',
+    support:'현재 계획과 같은 마우스 모델에서 영상의 독립 판독과 이견 구간, 합의 근거를 기록한 절차를 뒷받침합니다.',
     excerpt:'Scn8a N1768D/+ 마우스의 자발 발작을 영상으로 판독하고 개별 사건의 지속시간을 기록했다.',
     procedure:{location:'p. 9 분석 · 판독 기록',excerpt:'두 판독자는 영상 판독 결과를 독립 기록했다. 이견이 있으면 해당 영상 구간과 합의 근거를 별도 열에 남겼다.',reason:'독립 판독, 이견 구간, 합의 근거를 기록하는 방식은 지속시간과 빈도 평가에 모두 적용할 수 있습니다.',portable:true},
     caution:'같은 모델의 발작 판독 사례를 참고할 수 있습니다. 사건당 지속시간과 일정 기간의 발작 빈도는 서로 다른 지표입니다.'},
   {id:'PRJ-2022-04',targetId:'kcnq', title:'Kindling 모델의 발작 빈도 집계',
     model:'kindling', endpoint:'seizureFrequency', measurement:'자극 후 운동성 발작 횟수 · 자극 세션 기준',
     source:'PRJ-2022-04 · Kv7.2/7.3 발작 평가.pdf', location:'p. 4 모델 · p. 8 평가 지표',
+    support:'발작 빈도를 집계할 때 관찰 구간과 사건 수를 함께 기록해야 하는 이유를 보여줍니다. 이 보고서의 집계 단위는 자극 세션입니다.',
     excerpt:'편도체 kindling 랫드에서 자극 세션별 운동성 발작을 집계했다.',
     procedure:{location:'p. 8 평가 지표 · 집계표',excerpt:'자극 시각과 이후 운동성 발작을 세션별로 기록했다.',reason:'관찰 시점을 기록하는 방식은 참고할 수 있습니다. 현재의 자발 발작에는 자극 세션 대신 개체별 관찰 구간을 적용해야 합니다.',portable:false},
     caution:'같은 지표의 기록 방식을 참고할 수 있습니다. 랫드의 자극 유발 발작과 마우스의 자발 발작은 사건 정의와 빈도의 분모가 다릅니다.'},
   {id:'PRJ-2022-12',targetId:'trem2', title:'미세아교세포 염증 반응 평가',
     model:'microglia', endpoint:'il1b', measurement:'배양 상층액의 IL-1β 농도 · 회차별 절대값',
     source:'PRJ-2022-12 · TREM2 세포 반응 보고서.pdf', location:'p. 6 세포 모델 · p. 9 결과',
+    support:'회차별 검체와 대조군의 절대 농도를 함께 기록하는 방식을 뒷받침합니다.',
     excerpt:'사람 iPSC 유래 미세아교세포의 배양 상층액에서 IL-1β 농도를 측정하고 회차별 절대값을 기록했다.',
     procedure:{location:'p. 9 결과 · 회차별 기록',excerpt:'회차 ID, 검체 ID, 대조군 값과 검체의 절대 농도를 같은 표에 기록했다.',reason:'회차별 검체와 대조군을 나란히 남기는 기록 형식은 재사용할 수 있습니다. 변화율은 현재 계획의 정의에 따라 계산하세요.',portable:true},
     caution:'같은 모델과 지표의 회차별 편차를 검토하는 데 참고할 수 있습니다. 절대 농도와 대조군 대비 변화율을 비교하려면 대조군 값과 정규화 기준을 확인해야 합니다.'}
@@ -1542,7 +1554,10 @@ function renderRelatedProjects(item) {
 
   const filters = document.querySelectorAll('#relatedProjectFilters button');
   const results = $('relatedProjectResults');
-  const selectedRecord = () => matches.find(match => match.record.id === pastReferences.get(item))?.record;
+  const initial = pastReferences.get(item);
+  const chosen = [...new Set(initial?.ids || [])].map(id => matches.find(match => match.record.id===id)?.record)
+    .filter(Boolean).slice(0,2);
+  let active = chosen.find(record => record.id===initial?.active) || chosen[0];
   let recommendations = [];
   let applied;
   const renderMatches = filter => {
@@ -1566,37 +1581,48 @@ function renderRelatedProjects(item) {
         <p><b>비교 시 주의할 점</b> · ${record.caution}</p>
         ${pastSource(record)}
         <button type="button" class="btn ghost compact project-pick" data-reference="${record.id}"
-          aria-pressed="${selectedRecord() === record}" aria-controls="selectedProjectComparison">${selectedRecord() === record ? '선택됨' : '선택해서 비교'}</button>
+          aria-controls="selectedProjectComparison">선택해서 비교</button>
       </article>`;
     }).join('') || '<p class="sub">이 조건에 맞는 다른 타겟의 과거 기록이 없습니다.</p>';
+    updateButtons();
   };
   filters.forEach(button => button.addEventListener('click', () => {
     filters.forEach(filter => filter.setAttribute('aria-pressed', String(filter === button)));
     renderMatches(button.dataset.match);
   }));
-  const updateSelection = () => {
-    const selected = selectedRecord();
+  const updateButtons = () => {
+    $('relatedProjectSelection').textContent = `비교에 선택 ${chosen.length}/2건`;
     results.querySelectorAll('[data-reference]').forEach(button => {
-      const isSelected = button.dataset.reference === selected?.id;
-      button.setAttribute('aria-pressed', String(isSelected));
-      button.textContent = isSelected ? '선택됨' : '선택해서 비교';
+      const index = chosen.findIndex(record => record.id===button.dataset.reference);
+      button.setAttribute('aria-pressed', String(index >= 0));
+      button.disabled = index < 0 && chosen.length === 2;
+      button.textContent = index >= 0 ? `선례 ${index+1} · 선택 해제` : '선택해서 비교';
     });
-    recommendations = projectReviewRecommendations(item.plan, selected);
-    renderSelectedProject(item, selected, recommendations, applied);
+  };
+  const updateSelection = next => {
+    if (next !== active) {
+      if (applied) $('rdSaveStatus').textContent = '작성 중인 질문은 유지했습니다. 현재 검토 보고서에 맞는지 확인하세요.';
+      else $('rdSaveStatus').textContent = '';
+      applied = undefined;
+    } else $('rdSaveStatus').textContent = '';
+    active = next;
+    pastReferences.set(item, {ids:chosen.map(record => record.id),active:active?.id});
+    $('rdOpenSaved').classList.add('hidden');
+    updateButtons();
+    recommendations = projectReviewRecommendations(item.plan, active);
+    renderSelectedProject(item, chosen, active, recommendations, applied);
     paintReviewGuide($('rdSelectedGuide'), applied);
   };
   results.addEventListener('click', event => {
     const button = event.target.closest('[data-reference]');
     if (!button) return;
-    if (pastReferences.get(item) !== button.dataset.reference) {
-      if (applied) $('rdSaveStatus').textContent = '작성 중인 질문은 유지했습니다. 새 참고 보고서에 맞는지 확인하세요.';
-      else $('rdSaveStatus').textContent = '';
-      applied = undefined;
-    }
-    pastReferences.set(item, button.dataset.reference);
-    $('rdOpenSaved').classList.add('hidden');
-    updateSelection();
-    $('selectedProjectTitle').focus();
+    const record = matches.find(match => match.record.id===button.dataset.reference)?.record;
+    const index = chosen.indexOf(record);
+    if (index >= 0) chosen.splice(index,1);
+    else if (record && chosen.length < 2) chosen.push(record);
+    const next = chosen.includes(active) ? active : chosen[0];
+    updateSelection(next);
+    if (index < 0) $('selectedProjectTitle')?.focus();
   });
   const comparison = $('selectedProjectComparison');
   comparison.addEventListener('click', event => {
@@ -1616,57 +1642,98 @@ function renderRelatedProjects(item) {
       editor.focus();
       return;
     }
+    const activeButton = event.target.closest('[data-active-reference]');
+    if (activeButton) {
+      const record = chosen.find(item => item.id===activeButton.dataset.activeReference);
+      if (record && record !== active) {
+        updateSelection(record);
+        comparison.querySelector('[data-active-reference][aria-pressed="true"]').focus();
+      }
+      return;
+    }
     if (event.target.id !== 'clearProjectReference') return;
-    const previous = selectedRecord();
-    pastReferences.delete(item);
-    $('rdOpenSaved').classList.add('hidden');
-    $('rdSaveStatus').textContent = applied ? '작성 중인 질문은 유지했습니다. 참고 보고서 인용을 해제했습니다.' : '';
-    applied = undefined;
-    updateSelection();
+    const previous = active;
+    chosen.length = 0;
+    updateSelection(undefined);
     (results.querySelector(`[data-reference="${previous.id}"]`) ||
       document.querySelector('#relatedProjectFilters [aria-pressed="true"]')).focus();
   });
   renderMatches('all');
-  updateSelection();
-  return () => ({reference:selectedRecord(), recommendation:applied});
+  updateSelection(active);
+  return () => ({reference:active, references:chosen, recommendation:applied});
 }
 
 
-function renderSelectedProject(item, record, recommendations, applied) {
+
+function precedentSynthesis(records, design) {
+  const [first,second] = records;
+  const modelOnly = record => record.model===design.model && record.endpoint!==design.endpoint;
+  const endpointOnly = record => record.model!==design.model && record.endpoint===design.endpoint;
+  const complementary = records.some(modelOnly) && records.some(endpointOnly);
+  const comparisons = [
+    ['모델', PROJECT_MODELS[first.model], PROJECT_MODELS[second.model]],
+    ['평가 지표', PROJECT_ENDPOINTS[first.endpoint], PROJECT_ENDPOINTS[second.endpoint]],
+    ['측정 조건', first.measurement, second.measurement]
+  ].filter(([,a,b]) => a !== b);
+  return `<section class="precedent-synthesis" aria-labelledby="precedentSynthesisTitle">
+    <h4 id="precedentSynthesisTitle">두 선례가 뒷받침하는 판단</h4>
+    <div class="rd-pair">${records.map((record,index) => `<article class="related-project rd-evidence">
+      <h4>선례 ${index+1} · ${record.title}</h4>
+      <p>${record.support}</p>
+      <p class="sub"><b>해석 범위</b> · ${record.caution}</p>
+      ${pastSource({source:record.source,location:record.procedure.location,excerpt:record.procedure.excerpt})}
+    </article>`).join('')}</div>
+    <div class="precedent-divergence">
+      <h4>해석이 갈리는 지점</h4>
+      ${comparisons.length ? `<p>${complementary
+          ? '현재 계획과 같은 모델을 쓴 보고서는 판독·기록 조건을, 같은 지표를 쓴 보고서는 지표의 정의와 집계 조건을 검토하는 데 쓰입니다. 두 선례의 결과 수치를 직접 비교하려면 모델과 지표의 차이를 먼저 해소해야 합니다.'
+          : '재사용할 기록·판독 절차와 결과 수치의 비교 가능성을 각각 검토하세요.'}</p>
+        <ul class="related-project-differences">${comparisons.map(([label,a,b]) => `<li><b>${label}</b> · 선례 1 ${a} / 선례 2 ${b}</li>`).join('')}</ul>`
+        : '<p>기록된 설계 조건은 같습니다. 해석이 일치하는지는 대조군, 원자료, 판정 기준을 확인해야 합니다.</p>'}
+    </div>
+  </section>`;
+}
+
+
+function renderSelectedProject(item, records, active, recommendations, applied) {
   const container = $('selectedProjectComparison');
-  container.classList.toggle('hidden', !record);
+  container.classList.toggle('hidden', !active);
   const noteSource = $('rdReferenceSource');
-  noteSource.textContent = record
-    ? `함께 저장할 참고 보고서 · ${record.source} · ${record.location}`
+  noteSource.textContent = records.length
+    ? records.map((record,index) => `함께 저장할 선례 ${index+1} · ${record.source} · ${record.location}`).join('\n')
     : '';
-  noteSource.classList.toggle('hidden', !record);
-  if (!record) {
+  noteSource.classList.toggle('hidden', !active);
+  if (!active) {
     container.innerHTML = '';
     return;
   }
   const plan = item.plan;
   container.innerHTML = `<div class="related-project-head">
     <h3 id="selectedProjectTitle" tabindex="-1">현재 계획과 선택한 프로젝트 비교</h3>
-    <button type="button" class="btn ghost compact" id="clearProjectReference">참고 선택 해제</button>
+    <button type="button" class="btn ghost compact" id="clearProjectReference">${records.length===2 ? '두 선례 선택 해제' : '참고 선택 해제'}</button>
   </div>
-  <div class="rd-pair">
+  <div class="precedent-grid ${records.length===1?'single':''}">
     <article class="rd-evidence related-project">
       <p class="eyebrow">현재 계획 · ${cur.sym}</p>
       <h4>${item.title}</h4>
       <dl>${projectDesignFields(plan.design)}</dl>
       ${pastSource(plan)}
     </article>
-    <article class="rd-evidence related-project">
-      <p class="eyebrow">선택한 과거 프로젝트 · ${T(record.targetId).sym}</p>
+    ${records.map((record,index) => `<article class="rd-evidence related-project">
+      <p class="eyebrow">선례 ${index+1} · ${T(record.targetId).sym}</p>
       <h4>${record.title}</h4>
       <dl>${projectDesignFields(record, plan.design)}</dl>
       ${pastSource(record)}
-    </article>
+    </article>`).join('')}
   </div>
-  <p><b>해석할 때 확인할 점</b> · ${record.caution}</p>
-  ${projectReuseHTML(projectReuseItems(plan.design, record),record)}
+  ${records.length===2 ? precedentSynthesis(records, plan.design) : `<p><b>해석할 때 확인할 점</b> · ${active.caution}</p>`}
+  ${records.length===2 ? `<div class="precedent-focus"><p><b>항목별 판단과 추천 질문에 사용할 보고서</b></p>
+    <div class="filters" role="group" aria-label="검토에 사용할 보고서">${records.map((record,index) => `<button type="button"
+      class="${active===record?'on':''}" data-active-reference="${record.id}" aria-pressed="${active===record}">선례 ${index+1} · ${record.id}</button>`).join('')}</div>
+  </div>` : ''}
+  ${projectReuseHTML(projectReuseItems(plan.design, active),active)}
   ${projectRecommendationsHTML(recommendations, applied)}`;
-  bindReuseDecisions(container, item, record);
+  bindReuseDecisions(container, item, active);
 }
 
 const PAST_PROJECT_STATUS = {
@@ -1727,13 +1794,14 @@ function renderPastCase(item) {
   <section class="card related-projects" aria-labelledby="relatedProjectTitle">
     <div class="related-project-head"><div>
       <h3 id="relatedProjectTitle">1. 참고 프로젝트 선택</h3>
-      <p class="sub">다른 타겟의 기록에서 ‘선택해서 비교’를 누르면 차이와 추천 질문을 볼 수 있습니다.</p>
+      <p class="sub">‘선택해서 비교’로 과거 프로젝트를 두 건까지 추가할 수 있습니다.</p>
     </div><span class="sub" id="relatedProjectCount" role="status"></span></div>
     <div id="relatedProjectFilters" class="filters" role="group" aria-label="관련 프로젝트 검색 조건">
       <button type="button" data-match="all" aria-pressed="true">전체</button>
       <button type="button" data-match="model" aria-pressed="false">같은 모델</button>
       <button type="button" data-match="endpoint" aria-pressed="false">같은 평가 지표</button>
     </div>
+    <p class="sub" id="relatedProjectSelection" role="status"></p>
     <div id="relatedProjectResults"></div>
   </section>
   <section class="card selected-project-comparison hidden" id="selectedProjectComparison" aria-labelledby="selectedProjectTitle"></section>
@@ -1749,12 +1817,11 @@ function pastSource(source) {
   </div>`;
 }
 
-function openPastReview(targetId, caseId, referenceId) {
+function openPastReview(targetId, caseId, referenceId, referenceIds=[]) {
   if (caseId) {
     pastSelection.set(targetId, caseId);
     const item = PAST_PROJECTS[targetId].find(project => project.id === caseId);
-    pastReferences.delete(item);
-    if (referenceId) pastReferences.set(item, referenceId);
+    pastReferences.set(item, {ids:referenceIds,active:referenceId});
   }
   rdMode = 'compare';
   openTarget(targetId, 'rd');
@@ -1866,11 +1933,12 @@ function bindRDNote({mode,questionId,next,sources,getReviewContext}) {
   });
   $('rdNoteForm').addEventListener('submit', event => {
     event.preventDefault();
-    const {reference,recommendation} = getReviewContext?.() || {};
-    const attachments = reference ? [...sources,reference] : sources;
+    const {reference,references=[],recommendation} = getReviewContext?.() || {};
+    const attachments = [...sources,...references];
     const note = {
       targetId, mode, questionId, text:input.value.trim(),
       referenceId:reference?.id,
+      referenceIds:references.length ? references.map(record=>record.id) : undefined,
       recommendation:recommendation && {id:recommendation.id,reason:recommendation.reason,documents:recommendation.documents,check:recommendation.check},
       review:{status:'pending',conclusion:''},
       sources:attachments.map(item => item ? {name:item.source, location:item.location, url:item.url} : null)
@@ -1882,6 +1950,7 @@ function bindRDNote({mode,questionId,next,sources,getReviewContext}) {
     }
     const existing = rdNotes.find(saved => (saved.mode || 'evidence') === mode && saved.targetId === targetId &&
       saved.questionId === questionId && saved.text === note.text && saved.referenceId === note.referenceId &&
+      noteReferenceIds(saved).join('|') === noteReferenceIds(note).join('|') &&
       saved.recommendation?.id === note.recommendation?.id);
     openSaved.classList.remove('hidden');
     openSaved.onclick = () => openSavedReview(existing || note);
@@ -1966,6 +2035,11 @@ function bindReviewOutcome(article, note) {
   });
 }
 
+function noteReferenceIds(note) {
+  if (Array.isArray(note.referenceIds)) return note.referenceIds;
+  return note.referenceId ? [note.referenceId] : [];
+}
+
 function renderRDNotes() {
   $('tab-rd').insertAdjacentHTML('beforeend', `<section class="card rd-review rd-saved" lang="ko">
     <h2>저장한 리뷰 질문</h2>
@@ -1979,26 +2053,27 @@ function renderRDNotes() {
   $('rdSavedNotes').innerHTML = rdNotes.map(note => {
     const target = T(note.targetId);
     const past = note.mode === 'compare';
-    const reference = past && RELATED_PROJECT_ARCHIVE.find(record => record.id === note.referenceId);
-    const open = past
-      ? `openPastReview('${target.id}', '${note.questionId}', '${reference?.id || ''}')`
-      : `openRDReview('${target.id}', '${note.questionId}')`;
+
     return `<article class="rd-saved-note">
       <div class="rd-saved-summary">
         <div class="rd-saved-heading"><span class="pill">${target.sym}</span><span class="pill review-status"></span></div>
-        <button class="btn ghost compact" onclick="${open}">${past ? '과거 프로젝트 비교 열기' : '근거 비교 열기'}</button>
+        <button class="btn ghost compact rd-open-comparison">${past ? '과거 프로젝트 비교 열기' : '근거 비교 열기'}</button>
       </div>
       <p class="rd-saved-text"></p>
       <p class="sub rd-saved-reason hidden"></p>
       <div class="rd-saved-guide hidden"></div>
       <details class="rd-saved-citations"><summary>저장한 출처</summary>
-        <ul class="rd-saved-sources"><li>${past ? '과거 보고서' : '내부'} · </li><li>${past ? '현재 계획서' : '외부'} · </li>${past && note.sources?.[2] ? '<li>참고 프로젝트 보고서 · </li>' : ''}</ul>
+        <ul class="rd-saved-sources"><li>${past ? '과거 보고서' : '내부'} · </li><li>${past ? '현재 계획서' : '외부'} · </li>${past && note.sources?.[2] ? '<li>참고 프로젝트 보고서 · </li>' : ''}${past && note.sources?.[3] ? '<li>두 번째 참고 프로젝트 보고서 · </li>' : ''}</ul>
       </details>
       ${reviewOutcomeForm()}
     </article>`;
   }).join('');
   $('rdSavedNotes').querySelectorAll('.rd-saved-note').forEach((article,index) => {
     const note = rdNotes[index];
+    article.querySelector('.rd-open-comparison').addEventListener('click', () => {
+      if (note.mode === 'compare') openPastReview(note.targetId,note.questionId,note.referenceId,noteReferenceIds(note));
+      else openRDReview(note.targetId,note.questionId);
+    });
     article.querySelector('.rd-saved-text').textContent = note.text;
     if (typeof note.recommendation?.reason === 'string') {
       const reason = article.querySelector('.rd-saved-reason');
@@ -2039,12 +2114,18 @@ const linkedTarget=demoParams.get('target');
 if(demoParams.get('view')==='rd' && T(linkedTarget)){
   if(demoParams.get('mode')==='compare'){
     rdMode='compare';
-    const firstCase=PAST_PROJECTS[linkedTarget]?.[0];
-    const reference=demoParams.get('reference');
-    if(firstCase && reference)pastReferences.set(firstCase, reference);
+    const cases=PAST_PROJECTS[linkedTarget] || [];
+    const project=cases.find(item=>item.id===demoParams.get('case')) || cases[0];
+    const ids=demoParams.getAll('reference');
+    if(project && ids.length){
+      pastSelection.set(linkedTarget,project.id);
+      pastReferences.set(project,{ids,active:ids[0]});
+    }
   }
   openTarget(linkedTarget,'rd');
-  $(demoParams.get('section')==='reuse' ? 'projectReuseTitle' : 'projectPromptsTitle')?.focus();
+  const section=demoParams.get('section');
+  const heading=section==='reuse' ? 'projectReuseTitle' : section==='precedents' ? 'selectedProjectTitle' : 'projectPromptsTitle';
+  $(heading)?.focus();
 }
 </script>
 </body>
