@@ -327,6 +327,16 @@ tbody tr.active{background:var(--teal-soft)}
 .review-status[data-state=missing]{background:var(--amber-soft);color:#7d4e10}
 @media(max-width:600px){.rd-review-fields{grid-template-columns:minmax(0,1fr)}}
 
+
+.project-reuse{display:grid;gap:10px;padding-top:12px;border-top:1px solid var(--line)}
+.project-reuse .sub{margin-top:3px}
+.reuse-list,.reuse-item,.reuse-form{display:grid;gap:9px}
+.reuse-item .rd-source{margin-top:0}
+.reuse-form{padding:10px;background:#fff;border:1px solid var(--line);border-radius:9px}
+.reuse-form label{font-weight:700}
+.reuse-form select,.reuse-form textarea{font:inherit;width:100%;min-width:0;padding:8px;border:1px solid var(--line);border-radius:8px;background:white;color:var(--ink)}
+.reuse-form textarea{resize:vertical}
+
 </style>
 </head>
 <body>
@@ -1286,28 +1296,139 @@ const RELATED_PROJECT_ARCHIVE = [
     model:'g2019s', endpoint:'lipid', measurement:'선조체 지질량 · 대조군 대비 변화',
     source:'PRJ-2018-06 · GBA1 모델 평가.pdf', location:'p. 6 모델 · p. 11 평가 지표',
     excerpt:'G2019S 마우스 선조체에서 글루코실세라마이드 변화를 평가했다.',
+    procedure:{location:'p. 11 평가 지표 · 표 2',excerpt:'검체 ID와 대조군 ID를 개별 결과 행에 기재했다.',reason:'검체와 대조군을 짝지어 기록하는 표 형식은 현재 지표에도 적용할 수 있습니다.',portable:true},
     caution:'같은 모델의 조직 선정과 대조군 기록을 참고할 수 있습니다. 과거 연구의 지질 변화량을 현재 계획의 다른 평가 지표와 해석하려면 두 지표를 연결하는 근거가 필요합니다.'},
   {id:'PRJ-2019-22',targetId:'gpr6', title:'운동 협응 평가 기록',
     model:'mptp', endpoint:'rotarod', measurement:'고정 속도 로타로드 · 평가일 낙하까지의 시간',
     source:'PRJ-2019-22 · GPR6 운동 행동 평가.pdf', location:'p. 8 평가 방법 · 표 3',
     excerpt:'MPTP 마우스의 운동 행동을 고정 속도 로타로드에서 평가일 낙하까지의 시간으로 기록했다.',
+    procedure:{location:'p. 8 평가 방법',excerpt:'고정 속도에서 평가일의 낙하 시간만 기록했다.',reason:'기록 항목을 참고할 수 있습니다. 현재 계획의 가속 방식과 개체별 기준값 보정을 반영해야 합니다.',portable:false},
     caution:'같은 평가 지표의 집계 양식을 참고할 수 있습니다. 질환 모델, 로타로드 속도 설정, 기준 시점 보정이 다릅니다.'},
   {id:'PRJ-2020-16',targetId:'kcnq', title:'SCN8A 모델 발작 지속시간 검토',
     model:'scn8a', endpoint:'seizureDuration', measurement:'자발 발작 1건당 지속시간 · 영상 판독',
     source:'PRJ-2020-16 · Kv7.2/7.3 발작 판독.pdf', location:'p. 5 동물 모델 · p. 9 분석',
     excerpt:'Scn8a N1768D/+ 마우스의 자발 발작을 영상으로 판독하고 개별 사건의 지속시간을 기록했다.',
+    procedure:{location:'p. 9 분석 · 판독 기록',excerpt:'두 판독자는 영상 판독 결과를 독립 기록했다. 이견이 있으면 해당 영상 구간과 합의 근거를 별도 열에 남겼다.',reason:'독립 판독, 이견 구간, 합의 근거를 기록하는 방식은 지속시간과 빈도 평가에 모두 적용할 수 있습니다.',portable:true},
     caution:'같은 모델의 발작 판독 사례를 참고할 수 있습니다. 사건당 지속시간과 일정 기간의 발작 빈도는 서로 다른 지표입니다.'},
   {id:'PRJ-2022-04',targetId:'kcnq', title:'Kindling 모델의 발작 빈도 집계',
     model:'kindling', endpoint:'seizureFrequency', measurement:'자극 후 운동성 발작 횟수 · 자극 세션 기준',
     source:'PRJ-2022-04 · Kv7.2/7.3 발작 평가.pdf', location:'p. 4 모델 · p. 8 평가 지표',
     excerpt:'편도체 kindling 랫드에서 자극 세션별 운동성 발작을 집계했다.',
+    procedure:{location:'p. 8 평가 지표 · 집계표',excerpt:'자극 시각과 이후 운동성 발작을 세션별로 기록했다.',reason:'관찰 시점을 기록하는 방식은 참고할 수 있습니다. 현재의 자발 발작에는 자극 세션 대신 개체별 관찰 구간을 적용해야 합니다.',portable:false},
     caution:'같은 지표의 기록 방식을 참고할 수 있습니다. 랫드의 자극 유발 발작과 마우스의 자발 발작은 사건 정의와 빈도의 분모가 다릅니다.'},
   {id:'PRJ-2022-12',targetId:'trem2', title:'미세아교세포 염증 반응 평가',
     model:'microglia', endpoint:'il1b', measurement:'배양 상층액의 IL-1β 농도 · 회차별 절대값',
     source:'PRJ-2022-12 · TREM2 세포 반응 보고서.pdf', location:'p. 6 세포 모델 · p. 9 결과',
     excerpt:'사람 iPSC 유래 미세아교세포의 배양 상층액에서 IL-1β 농도를 측정하고 회차별 절대값을 기록했다.',
+    procedure:{location:'p. 9 결과 · 회차별 기록',excerpt:'회차 ID, 검체 ID, 대조군 값과 검체의 절대 농도를 같은 표에 기록했다.',reason:'회차별 검체와 대조군을 나란히 남기는 기록 형식은 재사용할 수 있습니다. 변화율은 현재 계획의 정의에 따라 계산하세요.',portable:true},
     caution:'같은 모델과 지표의 회차별 편차를 검토하는 데 참고할 수 있습니다. 절대 농도와 대조군 대비 변화율을 비교하려면 대조군 값과 정규화 기준을 확인해야 합니다.'}
 ];
+
+
+const REUSE_STATUSES = {
+  reusable:{label:'재사용 가능',style:'rd'},
+  reference:{label:'참고용',style:'joint'},
+  hold:{label:'비교 보류',style:'bd'}
+};
+const REUSE_STORAGE_KEY = 'targetbridge.rd-reuse.v1';
+const reuseDecisions = loadReuseDecisions();
+
+function loadReuseDecisions() {
+  try {
+    return new Map(JSON.parse(localStorage.getItem(REUSE_STORAGE_KEY) || '[]'));
+  } catch {
+    return new Map();
+  }
+}
+
+function projectReuseItems(design, record) {
+  const sameModel = design.model === record.model;
+  const sameEndpoint = design.endpoint === record.endpoint;
+  const sameMeasurement = design.measurement === record.measurement;
+  const differences = [!sameModel && '모델', !sameEndpoint && '평가 지표', !sameMeasurement && '측정 조건'].filter(Boolean);
+  const pastEndpoint = PROJECT_ENDPOINTS[record.endpoint];
+  const currentEndpoint = PROJECT_ENDPOINTS[design.endpoint];
+  const location = record.location.split(' · ').at(-1);
+  const procedure = record.procedure;
+  return [
+    {
+      id:'endpoint',label:'평가 지표 정의',suggested:'reference',location,excerpt:record.excerpt,
+      reason:sameEndpoint
+        ? `두 연구 모두 ‘${currentEndpoint}’를 기록합니다. 과거 정의를 참고하고, 현재 계획의 사건 정의나 집계 단위와 일치하는지 확인하세요.`
+        : `과거 지표는 ‘${pastEndpoint}’, 현재 지표는 ‘${currentEndpoint}’입니다. 과거 지표의 정의는 참고할 수 있지만, 현재 지표를 그대로 대체하기는 어렵습니다.`
+    },
+    {
+      id:'procedure',label:'판독·기록 절차',suggested:procedure.portable?'reusable':'reference',
+      location:procedure.location,excerpt:procedure.excerpt,reason:procedure.reason
+    },
+    {
+      id:'values',label:'결과 수치',suggested:differences.length?'hold':'reference',location,excerpt:record.excerpt,
+      reason:differences.length
+        ? `${differences.join('·')}에 차이가 있습니다. 비교 기준과 필요한 원자료가 확인될 때까지 수치의 크기나 방향을 직접 비교하기 어렵습니다.`
+        : '기록된 설계 조건이 일치합니다. 대조군, 원자료, 결과의 변동성을 확인한 뒤 수치 비교 여부를 판단하세요.'
+    }
+  ];
+}
+
+function projectReuseHTML(items, record) {
+  return `<section class="project-reuse" aria-labelledby="projectReuseTitle">
+    <div><h4 id="projectReuseTitle" tabindex="-1">항목별 재사용 판단</h4>
+      <p class="sub">합성 보고서의 제안과 근거를 확인하고, 항목별로 최종 판단을 저장하세요.</p></div>
+    <div class="reuse-list">${items.map(item => {
+      const suggested = REUSE_STATUSES[item.suggested];
+      return `<article class="related-project reuse-item" data-reuse-item="${item.id}">
+        <div class="related-project-head"><h4>${item.label}</h4>
+          <span class="tag ${suggested.style}">제안 · ${suggested.label}</span></div>
+        <p>${item.reason}</p>
+        ${pastSource({source:record.source,location:item.location,excerpt:item.excerpt})}
+        <form class="reuse-form" aria-label="${item.label} 최종 판단">
+          <div class="rd-review-fields">
+            <label>최종 판단
+              <select required><option value="">선택하세요</option>${Object.entries(REUSE_STATUSES).map(([id,status])=>
+                `<option value="${id}">${status.label}</option>`).join('')}</select>
+            </label>
+            <label>판단 메모
+              <textarea maxlength="1000" rows="2" placeholder="재사용할 범위나 추가 확인이 필요한 항목"></textarea>
+            </label>
+          </div>
+          <div class="rd-note-actions">
+            <button type="submit" class="btn primary compact">최종 판단 저장</button>
+            <p class="sub" role="status"></p>
+          </div>
+        </form>
+      </article>`;
+    }).join('')}</div>
+  </section>`;
+}
+
+function bindReuseDecisions(container, project, record) {
+  container.querySelectorAll('.reuse-item').forEach(article => {
+    const key = [cur.id,project.id,record.id,article.dataset.reuseItem].join(':');
+    const form = article.querySelector('form');
+    const select = form.querySelector('select');
+    const memo = form.querySelector('textarea');
+    const message = form.querySelector('[role=status]');
+    const saved = reuseDecisions.get(key);
+    if (Object.hasOwn(REUSE_STATUSES, saved?.status)) {
+      select.value = saved.status;
+      memo.value = typeof saved.memo === 'string' ? saved.memo : '';
+      message.textContent = `기록된 판단 · ${REUSE_STATUSES[saved.status].label}`;
+    }
+    form.addEventListener('input', () => { message.textContent = ''; });
+    form.addEventListener('submit', event => {
+      event.preventDefault();
+      if (!Object.hasOwn(REUSE_STATUSES, select.value)) return;
+      reuseDecisions.set(key, {status:select.value,memo:memo.value.trim()});
+      memo.value = reuseDecisions.get(key).memo;
+      try {
+        localStorage.setItem(REUSE_STORAGE_KEY, JSON.stringify([...reuseDecisions]));
+        message.textContent = `저장했습니다 · ${REUSE_STATUSES[select.value].label}`;
+      } catch {
+        message.textContent = '브라우저 저장소를 사용할 수 없어 현재 페이지에만 기록했습니다.';
+      }
+    });
+  });
+}
 
 function projectDesignFields(design, current) {
   const fields = [
@@ -1543,7 +1664,9 @@ function renderSelectedProject(item, record, recommendations, applied) {
     </article>
   </div>
   <p><b>해석할 때 확인할 점</b> · ${record.caution}</p>
+  ${projectReuseHTML(projectReuseItems(plan.design, record),record)}
   ${projectRecommendationsHTML(recommendations, applied)}`;
+  bindReuseDecisions(container, item, record);
 }
 
 const PAST_PROJECT_STATUS = {
@@ -1566,7 +1689,7 @@ function renderPastProjects() {
         `<button type="button" class="btn ghost compact" onclick="openPastReview('${id}')" ${cur.id===id?'aria-current="true"':''}>${T(id).sym}</button>`).join('')}</nav>
     </div>
     ${cases.length ? `<ol class="rd-workflow" aria-label="과거 프로젝트 검토 순서">
-      <li><a href="#relatedProjectTitle">참고 프로젝트 선택</a></li><li>추천 질문 선택</li>
+      <li><a href="#relatedProjectTitle">참고 프로젝트 선택 및 항목별 판단</a></li><li>추천 질문 선택</li>
       <li>질문 편집 및 저장</li><li>저장한 질문에서 결과 기록</li>
     </ol>` : ''}
     <div id="pastReviewContent">${cases.length?'':'<section class="card"><h3>연결된 과거 프로젝트 사례가 없습니다</h3><p class="sub">위 타겟에서 과거 보고서와 현재 계획서를 비교할 수 있습니다.</p></section>'}</div>
@@ -1921,7 +2044,7 @@ if(demoParams.get('view')==='rd' && T(linkedTarget)){
     if(firstCase && reference)pastReferences.set(firstCase, reference);
   }
   openTarget(linkedTarget,'rd');
-  $('projectPromptsTitle')?.focus();
+  $(demoParams.get('section')==='reuse' ? 'projectReuseTitle' : 'projectPromptsTitle')?.focus();
 }
 </script>
 </body>
