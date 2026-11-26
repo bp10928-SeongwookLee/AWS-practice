@@ -295,6 +295,12 @@ tbody tr.active{background:var(--teal-soft)}
 .related-project-reasons .tag{white-space:normal}
 .related-project-differences{margin:0;padding-left:18px;color:var(--muted);font-size:13px}
 
+
+.related-project .project-pick{align-self:flex-start}
+.related-project .project-pick[aria-pressed=true]{border-color:var(--teal);background:var(--teal-soft);color:var(--teal)}
+.selected-project-comparison{display:grid;gap:12px;border-left:4px solid var(--teal)}
+.selected-project-comparison .tag{margin-left:6px}
+
 </style>
 </head>
 <body>
@@ -1250,40 +1256,48 @@ const PROJECT_ENDPOINTS = {
 
 /* Synthetic archived records with the experiment context needed for matching. */
 const RELATED_PROJECT_ARCHIVE = [
-  {targetId:'gba1', title:'파킨슨병 모델의 지질 지표 평가',
+  {id:'PRJ-2018-06',targetId:'gba1', title:'파킨슨병 모델의 지질 지표 평가',
     model:'g2019s', endpoint:'lipid', measurement:'선조체 지질량 · 대조군 대비 변화',
     source:'PRJ-2018-06 · GBA1 모델 평가.pdf', location:'p. 6 모델 · p. 11 평가 지표',
     excerpt:'G2019S 마우스 선조체에서 글루코실세라마이드 변화를 평가했다.',
     caution:'같은 모델의 조직 선정과 대조군 기록을 참고할 수 있습니다. 과거 연구의 지질 변화량을 현재 계획의 다른 평가 지표와 해석하려면 두 지표를 연결하는 근거가 필요합니다.'},
-  {targetId:'gpr6', title:'운동 협응 평가 기록',
+  {id:'PRJ-2019-22',targetId:'gpr6', title:'운동 협응 평가 기록',
     model:'mptp', endpoint:'rotarod', measurement:'고정 속도 로타로드 · 평가일 낙하까지의 시간',
     source:'PRJ-2019-22 · GPR6 운동 행동 평가.pdf', location:'p. 8 평가 방법 · 표 3',
     excerpt:'MPTP 마우스의 운동 행동을 고정 속도 로타로드에서 평가일 낙하까지의 시간으로 기록했다.',
     caution:'같은 평가 지표의 집계 양식을 참고할 수 있습니다. 질환 모델, 로타로드 속도 설정, 기준 시점 보정이 다릅니다.'},
-  {targetId:'kcnq', title:'SCN8A 모델 발작 지속시간 검토',
+  {id:'PRJ-2020-16',targetId:'kcnq', title:'SCN8A 모델 발작 지속시간 검토',
     model:'scn8a', endpoint:'seizureDuration', measurement:'자발 발작 1건당 지속시간 · 영상 판독',
     source:'PRJ-2020-16 · Kv7.2/7.3 발작 판독.pdf', location:'p. 5 동물 모델 · p. 9 분석',
     excerpt:'Scn8a N1768D/+ 마우스의 자발 발작을 영상으로 판독하고 개별 사건의 지속시간을 기록했다.',
     caution:'같은 모델의 발작 판독 사례를 참고할 수 있습니다. 사건당 지속시간과 일정 기간의 발작 빈도는 서로 다른 지표입니다.'},
-  {targetId:'kcnq', title:'Kindling 모델의 발작 빈도 집계',
+  {id:'PRJ-2022-04',targetId:'kcnq', title:'Kindling 모델의 발작 빈도 집계',
     model:'kindling', endpoint:'seizureFrequency', measurement:'자극 후 운동성 발작 횟수 · 자극 세션 기준',
     source:'PRJ-2022-04 · Kv7.2/7.3 발작 평가.pdf', location:'p. 4 모델 · p. 8 평가 지표',
     excerpt:'편도체 kindling 랫드에서 자극 세션별 운동성 발작을 집계했다.',
     caution:'같은 지표의 기록 방식을 참고할 수 있습니다. 랫드의 자극 유발 발작과 마우스의 자발 발작은 사건 정의와 빈도의 분모가 다릅니다.'},
-  {targetId:'trem2', title:'미세아교세포 염증 반응 평가',
+  {id:'PRJ-2022-12',targetId:'trem2', title:'미세아교세포 염증 반응 평가',
     model:'microglia', endpoint:'il1b', measurement:'배양 상층액의 IL-1β 농도 · 회차별 절대값',
     source:'PRJ-2022-12 · TREM2 세포 반응 보고서.pdf', location:'p. 6 세포 모델 · p. 9 결과',
     excerpt:'사람 iPSC 유래 미세아교세포의 배양 상층액에서 IL-1β 농도를 측정하고 회차별 절대값을 기록했다.',
     caution:'같은 모델과 지표의 회차별 편차를 검토하는 데 참고할 수 있습니다. 절대 농도와 대조군 대비 변화율을 비교하려면 대조군 값과 정규화 기준을 확인해야 합니다.'}
 ];
 
-function projectDesignFields(design) {
-  return `<div><dt>모델</dt><dd>${PROJECT_MODELS[design.model]}</dd></div>
-    <div><dt>평가 지표</dt><dd>${PROJECT_ENDPOINTS[design.endpoint]}</dd></div>
-    <div><dt>측정 조건</dt><dd>${design.measurement}</dd></div>`;
+function projectDesignFields(design, current) {
+  const fields = [
+    ['모델', 'model', PROJECT_MODELS[design.model]],
+    ['평가 지표', 'endpoint', PROJECT_ENDPOINTS[design.endpoint]],
+    ['측정 조건', 'measurement', design.measurement]
+  ];
+  return fields.map(([label,key,value]) => {
+    const same = current?.[key] === design[key];
+    const status = current ? `<span class="tag ${same?'rd':'bd'}">${same?'일치':'차이'}</span>` : '';
+    return `<div><dt>${label}</dt><dd>${value}${status}</dd></div>`;
+  }).join('');
 }
 
-function renderRelatedProjects(design) {
+function renderRelatedProjects(item) {
+  const design = item.plan.design;
   const matches = RELATED_PROJECT_ARCHIVE.filter(record => record.targetId !== cur.id)
     .map(record => ({record, model:record.model === design.model, endpoint:record.endpoint === design.endpoint}))
     .filter(match => match.model || match.endpoint)
@@ -1291,6 +1305,7 @@ function renderRelatedProjects(design) {
 
   const filters = document.querySelectorAll('#relatedProjectFilters button');
   const results = $('relatedProjectResults');
+  const selectedRecord = () => matches.find(match => match.record.id === pastReferences.get(item))?.record;
   const renderMatches = filter => {
     const visible = filter === 'all' ? matches : matches.filter(match => match[filter]);
     $('relatedProjectCount').textContent = `${visible.length}건`;
@@ -1311,6 +1326,8 @@ function renderRelatedProjects(design) {
         ${differences.length ? `<ul class="related-project-differences">${differences.map(text=>`<li>${text}</li>`).join('')}</ul>` : ''}
         <p><b>비교 시 주의할 점</b> · ${record.caution}</p>
         ${pastSource(record)}
+        <button type="button" class="btn ghost compact project-pick" data-reference="${record.id}"
+          aria-pressed="${selectedRecord() === record}" aria-controls="selectedProjectComparison">${selectedRecord() === record ? '선택됨' : '선택해서 비교'}</button>
       </article>`;
     }).join('') || '<p class="sub">이 조건에 맞는 다른 타겟의 과거 기록이 없습니다.</p>';
   };
@@ -1318,7 +1335,70 @@ function renderRelatedProjects(design) {
     filters.forEach(filter => filter.setAttribute('aria-pressed', String(filter === button)));
     renderMatches(button.dataset.match);
   }));
+  const updateSelection = () => {
+    const selected = selectedRecord();
+    results.querySelectorAll('[data-reference]').forEach(button => {
+      const isSelected = button.dataset.reference === selected?.id;
+      button.setAttribute('aria-pressed', String(isSelected));
+      button.textContent = isSelected ? '선택됨' : '선택해서 비교';
+    });
+    renderSelectedProject(item, selected);
+  };
+  results.addEventListener('click', event => {
+    const button = event.target.closest('[data-reference]');
+    if (!button) return;
+    if (pastReferences.get(item) !== button.dataset.reference) $('rdSaveStatus').textContent = '';
+    pastReferences.set(item, button.dataset.reference);
+    updateSelection();
+    $('selectedProjectTitle').focus();
+  });
+  $('selectedProjectComparison').addEventListener('click', event => {
+    if (event.target.id !== 'clearProjectReference') return;
+    const previous = selectedRecord();
+    pastReferences.delete(item);
+    $('rdSaveStatus').textContent = '';
+    updateSelection();
+    (results.querySelector(`[data-reference="${previous.id}"]`) ||
+      document.querySelector('#relatedProjectFilters [aria-pressed="true"]')).focus();
+  });
   renderMatches('all');
+  updateSelection();
+  return selectedRecord;
+}
+
+
+function renderSelectedProject(item, record) {
+  const container = $('selectedProjectComparison');
+  container.classList.toggle('hidden', !record);
+  const noteSource = $('rdReferenceSource');
+  noteSource.textContent = record
+    ? `함께 저장할 참고 보고서 · ${record.source} · ${record.location}`
+    : '';
+  noteSource.classList.toggle('hidden', !record);
+  if (!record) {
+    container.innerHTML = '';
+    return;
+  }
+  const plan = item.plan;
+  container.innerHTML = `<div class="related-project-head">
+    <h3 id="selectedProjectTitle" tabindex="-1">현재 계획과 선택한 프로젝트 비교</h3>
+    <button type="button" class="btn ghost compact" id="clearProjectReference">참고 선택 해제</button>
+  </div>
+  <div class="rd-pair">
+    <article class="rd-evidence related-project">
+      <p class="eyebrow">현재 계획 · ${cur.sym}</p>
+      <h4>${item.title}</h4>
+      <dl>${projectDesignFields(plan.design)}</dl>
+      ${pastSource(plan)}
+    </article>
+    <article class="rd-evidence related-project">
+      <p class="eyebrow">선택한 과거 프로젝트 · ${T(record.targetId).sym}</p>
+      <h4>${record.title}</h4>
+      <dl>${projectDesignFields(record, plan.design)}</dl>
+      ${pastSource(record)}
+    </article>
+  </div>
+  <p><b>해석할 때 확인할 점</b> · ${record.caution}</p>`;
 }
 
 const PAST_PROJECT_STATUS = {
@@ -1327,6 +1407,7 @@ const PAST_PROJECT_STATUS = {
   pending:{label:'판단 보류', style:'gap'}
 };
 const pastSelection = new Map();
+const pastReferences = new Map();
 
 function renderPastProjects() {
   const cases = PAST_PROJECTS[cur.id] || [];
@@ -1383,9 +1464,10 @@ function renderPastCase(item) {
     </div>
     <div id="relatedProjectResults"></div>
   </section>
-  ${rdNoteForm('남은 질문', '두 문서 출처와 함께 저장')}`;
-  renderRelatedProjects(item.plan.design);
-  bindRDNote({mode:'compare',questionId:item.id,next:item.next,sources:[item.past,item.plan]});
+  <section class="card selected-project-comparison hidden" id="selectedProjectComparison" aria-labelledby="selectedProjectTitle"></section>
+  ${rdNoteForm('남은 질문', '출처와 함께 저장')}`;
+  const selectedReference = renderRelatedProjects(item);
+  bindRDNote({mode:'compare',questionId:item.id,next:item.next,sources:[item.past,item.plan],selectedReference});
 }
 
 function pastSource(source) {
@@ -1395,11 +1477,16 @@ function pastSource(source) {
   </div>`;
 }
 
-function openPastReview(targetId, caseId) {
-  if (caseId) pastSelection.set(targetId, caseId);
+function openPastReview(targetId, caseId, referenceId) {
+  if (caseId) {
+    pastSelection.set(targetId, caseId);
+    const item = PAST_PROJECTS[targetId].find(project => project.id === caseId);
+    pastReferences.delete(item);
+    if (referenceId) pastReferences.set(item, referenceId);
+  }
   rdMode = 'compare';
   openTarget(targetId, 'rd');
-  $('pastCase')?.focus();
+  ($('selectedProjectTitle') || $('pastCase'))?.focus();
 }
 
 const RD_NOTES_KEY = 'targetbridge.rd-review.v1';
@@ -1478,6 +1565,7 @@ function rdNoteForm(label, button) {
   return `<form id="rdNoteForm" class="card rd-note">
     <label for="rdNoteText">${label}</label>
     <textarea id="rdNoteText" required maxlength="1000" rows="3"></textarea>
+    <p class="sub hidden" id="rdReferenceSource" aria-live="polite"></p>
     <div class="rd-note-actions">
       <button class="btn primary" type="submit">${button}</button>
       <p class="sub" id="rdSaveStatus" role="status"></p>
@@ -1485,15 +1573,18 @@ function rdNoteForm(label, button) {
   </form>`;
 }
 
-function bindRDNote({mode,questionId,next,sources}) {
+function bindRDNote({mode,questionId,next,sources,selectedReference}) {
   const targetId = cur.id;
   const input = $('rdNoteText');
   input.value = next;
   $('rdNoteForm').addEventListener('submit', event => {
     event.preventDefault();
+    const reference = selectedReference?.();
+    const attachments = reference ? [...sources,reference] : sources;
     const note = {
       targetId, mode, questionId, text:input.value.trim(),
-      sources:sources.map(item => item ? {name:item.source, location:item.location, url:item.url} : null)
+      referenceId:reference?.id,
+      sources:attachments.map(item => item ? {name:item.source, location:item.location, url:item.url} : null)
     };
     if (!note.text) {
       $('rdSaveStatus').textContent = '저장할 질문을 입력하세요.';
@@ -1501,7 +1592,7 @@ function bindRDNote({mode,questionId,next,sources}) {
       return;
     }
     if (rdNotes.some(saved => (saved.mode || 'evidence') === mode && saved.targetId === targetId &&
-      saved.questionId === questionId && saved.text === note.text)) {
+      saved.questionId === questionId && saved.text === note.text && saved.referenceId === note.referenceId)) {
       $('rdSaveStatus').textContent = '이미 저장된 질문입니다. 저장한 리뷰 질문에서 확인할 수 있습니다.';
       return;
     }
@@ -1535,12 +1626,15 @@ function renderRDNotes() {
   $('rdSavedNotes').innerHTML = rdNotes.map(note => {
     const target = T(note.targetId);
     const past = note.mode === 'compare';
-    const open = past ? 'openPastReview' : 'openRDReview';
+    const reference = past && RELATED_PROJECT_ARCHIVE.find(record => record.id === note.referenceId);
+    const open = past
+      ? `openPastReview('${target.id}', '${note.questionId}', '${reference?.id || ''}')`
+      : `openRDReview('${target.id}', '${note.questionId}')`;
     return `<article class="rd-saved-note">
       <div class="rd-saved-heading"><span class="pill">${target.sym}</span>
-        <button class="btn ghost compact" onclick="${open}('${target.id}', '${note.questionId}')">${past ? '과거 프로젝트 비교 열기' : '근거 비교 열기'}</button></div>
+        <button class="btn ghost compact" onclick="${open}">${past ? '과거 프로젝트 비교 열기' : '근거 비교 열기'}</button></div>
       <p class="rd-saved-text"></p>
-      <ul><li>${past ? '과거 보고서' : '내부'} · </li><li>${past ? '현재 계획서' : '외부'} · </li></ul>
+      <ul><li>${past ? '과거 보고서' : '내부'} · </li><li>${past ? '현재 계획서' : '외부'} · </li>${past && note.sources?.[2] ? '<li>참고 프로젝트 보고서 · </li>' : ''}</ul>
     </article>`;
   }).join('');
   $('rdSavedNotes').querySelectorAll('.rd-saved-note').forEach((article,index) => {
