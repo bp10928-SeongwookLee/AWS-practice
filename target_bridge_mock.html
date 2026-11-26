@@ -1366,6 +1366,10 @@ function renderRDNotes() {
 renderHome();
 attachSearch($('homeSearch'),$('homeDrop'));
 attachSearch($('sideSearch'),$('sideDrop'));
+
+const demoParams=new URLSearchParams(location.search);
+const linkedTarget=demoParams.get('target');
+if(demoParams.get('view')==='rd' && T(linkedTarget))openTarget(linkedTarget,'rd');
 </script>
 </body>
 </html>
