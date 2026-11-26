@@ -255,6 +255,42 @@ select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:10
 @media(max-width:800px){.bridge-cards{grid-template-columns:1fr}.intake-grid{grid-template-columns:1fr}}
 @media(max-width:520px){.home-flow{grid-template-columns:1fr}.intake-nav .btn{padding:8px 10px}.searchbox input{min-width:0}}
 
+
+.rd-modes{flex-wrap:wrap}
+.rd-review{display:grid;gap:14px;max-width:1060px}
+.rd-review h2,.rd-review h3,.rd-review p{margin:0}
+.rd-review h2{font-size:20px}
+.rd-review h3{font-size:16px}
+.rd-question{display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);gap:12px 24px;align-items:start}
+.rd-question label,.rd-note label{font-weight:700;display:grid;gap:6px}
+.rd-question select,.rd-note textarea{font:inherit;border:1px solid var(--line);border-radius:9px;padding:9px 11px;background:#fff;color:var(--ink);width:100%;min-width:0}
+.rd-question select{font-weight:500}
+.rd-example-links{display:flex;flex-wrap:wrap;gap:6px}
+.rd-example-links [aria-current=true]{border-color:var(--teal);color:var(--teal);background:var(--teal-soft)}
+#rdEvidence{display:grid;gap:14px}
+.rd-assessment{border-left:4px solid var(--amber)}
+.rd-assessment[data-status=numeric]{border-left-color:var(--green)}
+.rd-assessment[data-status=missing]{border-left-color:var(--red)}
+.rd-assessment .st{font-size:14px}
+.rd-assessment p{margin-top:4px}
+.rd-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.rd-evidence{display:flex;flex-direction:column;gap:8px;overflow-wrap:anywhere}
+.rd-external .eyebrow{color:var(--purple)}
+.rd-evidence dl{margin:0 0 4px;display:grid;gap:7px}
+.rd-evidence dt{font-size:12px;color:var(--muted)}
+.rd-evidence dd{margin:1px 0 0;font-weight:600}
+.rd-source{border-top:1px solid var(--line);padding-top:9px;margin-top:auto}
+.rd-source summary{cursor:pointer;color:var(--teal);font-weight:600}
+.rd-source details p{margin:5px 0}
+.rd-note{display:grid;gap:8px}
+.rd-note textarea{resize:vertical}
+.rd-note-actions,.rd-saved-heading{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px}
+.rd-saved-note{padding:14px 0;border-top:1px solid var(--line)}
+.rd-saved-note:last-child{padding-bottom:0}
+.rd-saved-note .rd-saved-text{white-space:pre-wrap;overflow-wrap:anywhere;margin-top:8px;font-weight:600}
+.rd-saved-note ul{margin:5px 0 0;padding-left:18px;overflow-wrap:anywhere;font-size:13px}
+@media(max-width:680px){.rd-question,.rd-pair{grid-template-columns:minmax(0,1fr)}}
+
 </style>
 </head>
 <body>
@@ -553,7 +589,7 @@ const tagHTML=tags=>tags.map(k=>`<span class="tag ${k}">${TAGL[k]}</span>`).join
 const LV={High:[3,'var(--red)'],Medium:[2,'var(--amber)'],Low:[1,'var(--green)']};
 function compHTML(t){const [n,c]=LV[t.competition];return `<span class="meter">${[0,1,2].map(i=>`<i style="${i<n?'background:'+c:''}"></i>`).join('')}</span><span class="lvl" style="color:${c}">${t.competition}</span>`}
 const T=id=>TARGETS.find(t=>t.id===id);
-let cur=null,tagFilter='all',regionFilter=null,rdMode='stack',species='All',activeTab='brain';
+let cur=null,tagFilter='all',regionFilter=null,rdMode='evidence',species='All',activeTab='brain';
 function toast(msg){const d=document.createElement('div');d.className='toast';d.textContent=msg;document.body.appendChild(d);setTimeout(()=>d.remove(),2200)}
 function matches(q){q=q.trim().toLowerCase();if(!q)return [];
   return TARGETS.filter(t=>[t.sym,t.full,t.indication,t.family,REGIONS[t.region].name,REGIONS[t.region].ko,t.moaShort].join(' ').toLowerCase().includes(q))}
@@ -717,8 +753,15 @@ function renderMarket(){
 /* ---------- R&D tab ---------- */
 function renderRD(){
   const t=cur;
-  const seg=`<div class="seg"><button class="${rdMode==='stack'?'on':''}" onclick="rdMode='stack';renderRD()">① Assets &amp; data stack</button>
-    <button class="${rdMode==='compare'?'on':''}" onclick="rdMode='compare';renderRD()">② Compare with past project</button></div>`;
+  const modes=[['evidence','근거 검토'],['notes','저장한 리뷰 질문'],['stack','Assets &amp; data stack'],['compare','Compare with past project']];
+  const seg=`<div class="seg rd-modes" aria-label="R&D Analysis">${modes.map(([mode,label]) =>
+    `<button aria-pressed="${rdMode===mode}" class="${rdMode===mode?'on':''}" onclick="rdMode='${mode}';renderRD();document.querySelector('.rd-modes [aria-pressed=true]').focus()">${label}</button>`).join('')}</div>`;
+  if(rdMode==='evidence'||rdMode==='notes'){
+    $('tab-rd').innerHTML=seg;
+    if(rdMode==='evidence')renderRDEvidence();
+    else renderRDNotes();
+    return;
+  }
   if(rdMode==='stack'){
     const sp=['All',...new Set(t.invivo.map(v=>v.species))];
     const rows=t.invivo.filter(v=>species==='All'||v.species===species);
@@ -759,7 +802,7 @@ function runCompare(){
   if(A.Biomarker!==B.Biomarker) tips.push(`Biomarker strategy differs. ${/CSF|Brain/.test(B.Biomarker)?'B adds a central readout, which fixes the gap seen in A.':'Consider adding a CSF/brain target-engagement readout; plasma-only was a weakness before.'}`);
   if(A['Safety finding']!=='None') tips.push(`A reported “${A['Safety finding']}”. Add liver panel / body-weight monitoring to B.`);
   if(A.Duration!==B.Duration) tips.push(`Dosing duration ${A.Duration} vs ${B.Duration}; align before drawing conclusions.`);
-  if(!tips.length) tips.push('Conditions largely match, so results can be compared directly.');
+  if(!tips.length) tips.push('Recorded conditions are similar. Check assay methods, controls, and sampling before comparing results.');
   $('cmpOut').innerHTML=`<div class="tblwrap"><table class="diff"><thead><tr><th>Condition</th><th>A · ${a.name}</th><th>B · ${b.name}</th><th></th></tr></thead><tbody>
     ${keys.map(k=>{const d=A[k]!==B[k];return `<tr class="${d?'d':''}"><td><b>${k}</b></td><td class="v ${d?'':'same'}">${A[k]}</td><td class="v ${d?'':'same'}">${B[k]}</td>
     <td class="mk" style="color:${d?'var(--amber)':'var(--green)'}">${d?'≠ differs':'= same'}</td></tr>`}).join('')}
@@ -1061,6 +1104,262 @@ function renderBridge() {
   <section class="card moa-card"><div><h3>${cur.sym} 작용 위치와 기전</h3>
     <p>${REGIONS[cur.region].name} · ${REGIONS[cur.region].ko} · ${cur.moaShort}</p></div>
     <button class="btn ghost" onclick="switchTab('brain')">뇌 지도 및 MoA 열기</button></section>`;
+}
+
+
+/* Curated public references paired with synthetic internal evidence. */
+const RD_LRRK2_INTERNAL = {
+  source:'CNS 연구 요약.pdf', location:'p. 4 · 가상 실험 RD-LRRK2-01',
+  subject:'G2019S 마우스 선조체', endpoint:'기준 대비 pRab10 변화율',
+  result:'−58% (합성 결과)', detail:'합성 실험에서 투여군의 선조체 pRab10 변화율을 대조군과 함께 기록했습니다.'
+};
+const RD_SCN8A_INTERNAL = {
+  source:'CNS 연구 요약.pdf', location:'p. 8 · 가상 실험 RD-SCN8A-01',
+  subject:'Scn8a N1768D/+ 마우스', endpoint:'관찰 기간 중 자발 발작 횟수',
+  result:'투여군에서 발작 빈도 감소 (합성 결과)', detail:'가상 내부 기록의 지표는 자발 발작 빈도입니다.'
+};
+const RD_NLRP3_EXTERNAL = {
+  source:'ChEMBL · NBC6 활성', location:'activity 18923757 · CHEMBL4324155',
+  url:'https://www.ebi.ac.uk/chembl/explore/activities/QUERYSTRING%3Adocument_chembl_id%3ACHEMBL4321841',
+  subject:'사람 THP-1 세포 · LPS/nigericin', endpoint:'IL-1β 감소 IC50',
+  result:'74 nM (ChEMBL 표준값)', detail:'ChEMBL의 NBC6 활성 기록에서 가져온 세포 수준 농도-반응 지표입니다.'
+};
+const RD_EVIDENCE = {
+  lrrk2: [
+    {
+      id:'human-biomarker', title:'사람 연구에서 어떤 표적 관여 지표를 사용했나?', status:'context',
+      reason:'두 자료 모두 pRab10을 다루지만, 마우스 선조체와 사람 말초혈액은 종과 검체가 달라 변화율을 직접 비교하기 어렵습니다.',
+      next:'내부 선조체 pRab10 결과를 사람의 말초혈액 지표와 연결하려면 어떤 근거가 필요한가?',
+      internal:RD_LRRK2_INTERNAL,
+      external:{source:'Jennings et al. · Movement Disorders', location:'PMID 36807624 · Results',
+        url:'https://pubmed.ncbi.nlm.nih.gov/36807624/', subject:'초기 임상 참여자의 말초혈액 단핵세포',
+        endpoint:'기준 대비 pT73 Rab10 변화율', result:'용량에 따른 pT73 Rab10 감소 보고',
+        detail:'초기 임상에서 말초 표적 경로 관여를 해석하는 데 사용된 지표입니다.'}
+    },
+    {
+      id:'clinical-outcome', title:'표적 관여 결과로 임상적 효과까지 설명할 수 있나?', status:'context',
+      reason:'내부 결과는 전임상 바이오마커 변화이고, 외부 2b 결과는 환자의 질병 진행 지표입니다. 두 근거는 서로 다른 질문에 답합니다.',
+      next:'내부 표적 관여 결과를 해석한 뒤에도 사람에서 질병 진행과 연결하려면 어떤 근거가 필요한가?',
+      internal:RD_LRRK2_INTERNAL,
+      external:{source:'Biogen · LUMA 2b 결과 발표', location:'공동 보도자료 · 1차 평가변수',
+        url:'https://investors.biogen.com/news-releases/news-release-details/biogen-and-denali-therapeutics-provide-update-phase-2b-luma',
+        subject:'초기 파킨슨병 환자', endpoint:'MDS-UPDRS II·III 점수의 확인된 악화까지 걸린 시간',
+        result:'회사 발표 기준, 위약 대비 진행 지연 미확인', detail:'스폰서가 발표한 2b 시험의 요약 결과입니다.'}
+    }
+  ],
+  nav16: [
+    {
+      id:'preclinical-model', title:'외부 자산의 발작 모델을 내부 결과 해석에 쓸 수 있나?', status:'context',
+      reason:'SCN8A 기능획득 변이를 다룬다는 공통점은 있으나, 내부는 자발 발작을 세고 외부는 유발 발작에서의 보호를 평가했습니다.',
+      next:'두 발작 모델에서 공통으로 해석할 수 있는 항목과 실험별로만 해석해야 하는 항목은 무엇인가?',
+      internal:RD_SCN8A_INTERNAL,
+      external:{source:'Johnson et al. · eLife', location:'PMID 35234610 · Scn8a 마우스 연구',
+        url:'https://pubmed.ncbi.nlm.nih.gov/35234610/', subject:'Scn8a 기능획득 변이 마우스',
+        endpoint:'유발 발작 보호 효과', result:'NBI-921352의 유발 발작 보호 효과 보고',
+        detail:'외부 연구에서 마우스의 발작 보호 효과를 평가했습니다.'}
+    },
+    {
+      id:'human-endpoint', title:'환자 시험에서는 발작을 어떻게 평가했나?', status:'context',
+      reason:'두 지표 모두 발작 빈도를 다루지만, 동물의 자발 발작과 SCN8A-DEE 환자의 운동성 발작은 대상과 사건 정의가 다릅니다.',
+      next:'내부에서 센 발작 유형 중 환자 시험의 운동성 발작 정의와 연결해 설명할 수 있는 것은 무엇인가?',
+      internal:RD_SCN8A_INTERNAL,
+      external:{source:'ClinicalTrials.gov · SCN8A-DEE 2상', location:'NCT04873869 · Protocol § 3',
+        url:'https://cdn.clinicaltrials.gov/large-docs/69/NCT04873869/Prot_000.pdf',
+        subject:'SCN8A-DEE 환자', endpoint:'집계 가능한 운동성 발작 빈도',
+        result:'시험 계획서에 정의된 1차 효능 평가', detail:'시험 계획서의 지표 정의를 인용한 근거입니다.'}
+    }
+  ],
+  nlrp3: [
+    {
+      id:'matched-assay', title:'같은 세포 시험에서 활성값을 나란히 볼 수 있나?', status:'numeric',
+      reason:'사람 THP-1 세포, 자극 맥락, IL-1β 감소를 본 IC50 및 단위가 일치하도록 구성한 예시입니다. 개별 측정값을 나란히 볼 수 있으며, 실험실 간 편차와 변동성은 별도 확인이 필요합니다.',
+      next:'두 IC50 값을 외부 벤치마크로 쓰기 전에 대조군, 반복수, 변동성 중 어떤 정보를 확인해야 하는가?',
+      internal:{source:'NLRP3 세포 활성 요약.pdf', location:'표 2 · 가상 실험 RD-NLRP3-01',
+        subject:'사람 THP-1 세포 · LPS/nigericin', endpoint:'IL-1β 감소 IC50',
+        result:'110 nM (합성 결과)', detail:'공개 시험의 세포와 자극 맥락을 맞춰 만든 내부 합성 비교 사례입니다.'},
+      external:RD_NLRP3_EXTERNAL
+    },
+    {
+      id:'assay-gap', title:'외부 세포 시험을 내부 조직 결과의 기준으로 쓸 수 있나?', status:'context',
+      reason:'IL-1β를 공통으로 다루지만, 내부는 마우스 뇌 조직의 변화율이고 외부는 사람 세포에서 산출한 IC50입니다. 측정 대상과 결과 단위가 다릅니다.',
+      next:'세포 활성에서 뇌 조직 반응까지 연결해 해석하려면 어떤 중간 근거가 필요한가?',
+      internal:{source:'NLRP3 조직 반응 요약.pdf', location:'그림 3 · 가상 실험 RD-NLRP3-02',
+        subject:'마우스 뇌 조직', endpoint:'대조군 대비 IL-1β 변화율',
+        result:'−32% (합성 결과)', detail:'가상 내부 자료의 조직 수준 지표입니다.'},
+      external:RD_NLRP3_EXTERNAL
+    }
+  ]
+};
+const RD_COMPARABILITY = {
+  numeric:{label:'수치 비교 가능', style:'ok'},
+  context:{label:'해석 참고', style:'watch'},
+  missing:{label:'정보 부족', style:'gap'}
+};
+
+function rdQuestions(target) {
+  if (RD_EVIDENCE[target.id]) return RD_EVIDENCE[target.id];
+  return [
+    {id:'assay-benchmark', title:'외부에서 비교할 수 있는 실험 지표가 있나?', experiment:target.invivo[0]},
+    {id:'evidence-gap', title:'현재 내부 근거를 해석하려면 어떤 자료가 더 필요한가?', experiment:target.invivo[1]}
+  ].map(({id,title,experiment}) => ({
+    id,title,status:'missing',
+    reason:'이 질문에 연결된 공개 근거가 아직 없습니다. 외부 자료의 모델·검체·평가 지표를 확인하면 비교 가능 여부를 판단할 수 있습니다.',
+    next:`${target.sym}의 ${experiment.endpoint} 결과를 검토할 때 어떤 외부 출처와 실험 조건을 확인해야 하는가?`,
+    internal:{source:experiment.src, location:'합성 포트폴리오 기록', subject:`${experiment.species} · ${experiment.model}`,
+      endpoint:experiment.endpoint,result:experiment.result[1],
+      detail:`기록된 합성 실험 조건 · ${experiment.dose} ${experiment.route} · ${experiment.duration}`}
+  }));
+}
+
+
+const RD_NOTES_KEY = 'targetbridge.rd-review.v1';
+const rdSelection = new Map();
+const rdNotes = loadReviewNotes();
+
+function loadReviewNotes() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(RD_NOTES_KEY) || '[]');
+    if (!Array.isArray(stored)) return [];
+    return stored.filter(note => note && typeof note.text === 'string' &&
+      TARGETS.some(target => target.id === note.targetId && rdQuestions(target).some(question => question.id === note.questionId)));
+  } catch {
+    return [];
+  }
+}
+
+function rdEvidenceCard(label, item, kind) {
+  if (!item) return '<article class="card rd-evidence"><p class="eyebrow">외부 근거</p><h3>연결된 근거가 없습니다</h3><p class="sub">관련 논문이나 시험의 원문을 확인할 때 검체, 지표, 시점과 대조군을 함께 검토하세요.</p></article>';
+  const source = item.url
+    ? `<a class="source-link" href="${item.url}" target="_blank" rel="noopener noreferrer">${item.source} ↗</a>`
+    : `<details><summary>${item.source} · 샘플 기록 보기</summary><p>${item.detail}</p></details>`;
+  return `<article class="card rd-evidence ${kind}">
+    <p class="eyebrow">${label}</p>
+    <h3>${item.subject}</h3>
+    <dl><div><dt>평가 지표</dt><dd>${item.endpoint}</dd></div>
+      <div><dt>관찰 결과</dt><dd>${item.result}</dd></div></dl>
+    ${item.url ? `<p class="sub">${item.detail}</p>` : ''}
+    <div class="rd-source">${source}<p class="sub">${item.location}</p></div>
+  </article>`;
+}
+
+function renderRDEvidence() {
+  const questions = rdQuestions(cur);
+  $('tab-rd').insertAdjacentHTML('beforeend', `<section class="rd-review" lang="ko">
+    <div class="rd-question card">
+      <div><h2>${cur.sym} 근거 검토</h2><p class="sub">내부 합성 실험과 연결된 공개 근거를 비교합니다.</p></div>
+      <label for="rdQuestion">검토할 질문
+        <select id="rdQuestion">${questions.map(question => `<option value="${question.id}">${question.title}</option>`).join('')}</select>
+      </label>
+      <nav class="rd-example-links" aria-label="공개 근거가 연결된 예시 타겟">${Object.keys(RD_EVIDENCE).map(id =>
+        `<button type="button" class="btn ghost compact" onclick="openRDReview('${id}')" ${cur.id === id ? 'aria-current="true"' : ''}>${T(id).sym}</button>`).join('')}</nav>
+    </div>
+    <div id="rdEvidence"></div>
+  </section>`);
+  const select = $('rdQuestion');
+  select.value = rdSelection.get(cur.id) || questions[0].id;
+  select.addEventListener('change', () => {
+    rdSelection.set(cur.id, select.value);
+    renderRDComparison();
+  });
+  renderRDComparison();
+}
+
+function renderRDComparison() {
+  const question = rdQuestions(cur).find(item => item.id === $('rdQuestion').value);
+  const status = RD_COMPARABILITY[question.status];
+  $('rdEvidence').innerHTML = `<section class="card rd-assessment" data-status="${question.status}" aria-live="polite">
+    <h3><span class="st ${status.style}">${status.label}</span></h3><p>${question.reason}</p>
+  </section>
+  <div class="rd-pair">
+    ${rdEvidenceCard('내부 실험 · 합성 샘플', question.internal, 'rd-internal')}
+    ${rdEvidenceCard('외부 근거 · 공개 출처', question.external, 'rd-external')}
+  </div>
+  <form id="rdNoteForm" class="card rd-note">
+    <label for="rdNoteText">리뷰에 남길 질문</label>
+    <textarea id="rdNoteText" required maxlength="1000" rows="3"></textarea>
+    <div class="rd-note-actions">
+      <button class="btn primary" type="submit">출처와 함께 저장</button>
+      <p class="sub" id="rdSaveStatus" role="status"></p>
+    </div>
+  </form>`;
+  $('rdNoteText').value = question.next;
+  $('rdNoteForm').addEventListener('submit', event => {
+    event.preventDefault();
+    const input = $('rdNoteText');
+    const note = {
+      targetId:cur.id, questionId:question.id, text:input.value.trim(),
+      sources:[question.internal, question.external].map(item =>
+        item ? {name:item.source, location:item.location, url:item.url} : null)
+    };
+    if (!note.text) {
+      $('rdSaveStatus').textContent = '저장할 질문을 입력하세요.';
+      input.focus();
+      return;
+    }
+    if (rdNotes.some(saved => saved.targetId === note.targetId && saved.questionId === note.questionId && saved.text === note.text)) {
+      $('rdSaveStatus').textContent = '이미 저장된 질문입니다. 저장한 리뷰 질문에서 확인할 수 있습니다.';
+      return;
+    }
+    rdNotes.unshift(note);
+    try {
+      localStorage.setItem(RD_NOTES_KEY, JSON.stringify(rdNotes));
+      $('rdSaveStatus').textContent = '이 브라우저에 저장했습니다. 저장한 리뷰 질문에서 확인할 수 있습니다.';
+    } catch {
+      $('rdSaveStatus').textContent = '브라우저 저장소를 사용할 수 없어 현재 페이지에서만 보관합니다.';
+    }
+  });
+}
+
+function openRDReview(targetId, questionId) {
+  if (questionId) rdSelection.set(targetId, questionId);
+  rdMode = 'evidence';
+  openTarget(targetId, 'rd');
+  $('rdQuestion').focus();
+}
+
+function renderRDNotes() {
+  $('tab-rd').insertAdjacentHTML('beforeend', `<section class="card rd-review rd-saved" lang="ko">
+    <h2>저장한 리뷰 질문</h2>
+    <p class="sub">이 브라우저에서 모든 타겟의 검토 질문을 확인할 수 있습니다.</p>
+    <div id="rdSavedNotes"></div>
+  </section>`);
+  if (!rdNotes.length) {
+    $('rdSavedNotes').textContent = '저장한 질문이 없습니다. 근거 검토에서 질문을 저장하세요.';
+    return;
+  }
+  $('rdSavedNotes').innerHTML = rdNotes.map(note => {
+    const target = T(note.targetId);
+    const question = rdQuestions(target).find(item => item.id === note.questionId);
+    return `<article class="rd-saved-note">
+      <div class="rd-saved-heading"><span class="pill">${target.sym}</span>
+        <button class="btn ghost compact" onclick="openRDReview('${target.id}', '${question.id}')">근거 비교 열기</button></div>
+      <p class="rd-saved-text"></p>
+      <ul><li>내부 · </li><li>외부 · </li></ul>
+    </article>`;
+  }).join('');
+  $('rdSavedNotes').querySelectorAll('.rd-saved-note').forEach((article,index) => {
+    const note = rdNotes[index];
+    article.querySelector('.rd-saved-text').textContent = note.text;
+    article.querySelectorAll('li').forEach((item,sourceIndex) => {
+      const source = note.sources?.[sourceIndex];
+      if (!source || typeof source.name !== 'string' || typeof source.location !== 'string') {
+        item.append('연결된 출처 없음');
+        return;
+      }
+      if (typeof source.url === 'string' && URL.canParse(source.url) && new URL(source.url).protocol === 'https:') {
+        const link = document.createElement('a');
+        link.className = 'source-link';
+        link.href = source.url;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.textContent = source.name + ' ↗';
+        item.append(link);
+      } else {
+        item.append(source.name);
+      }
+      item.append(' · ' + source.location);
+    });
+  });
 }
 
 /* ---------- boot ---------- */
