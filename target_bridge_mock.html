@@ -152,12 +152,6 @@ tbody tr.active{background:var(--teal-soft)}
 .seg{display:inline-flex;background:#eaeef1;border-radius:11px;padding:3px;margin-bottom:16px}
 .seg button{border:0;background:none;padding:8px 14px;border-radius:9px;font-size:13px;font-weight:600;color:var(--muted)}
 .seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08)}
-.assets{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:16px}
-.asset .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
-.asset .top b{font-size:16px}
-.dl{display:grid;grid-template-columns:62px 1fr;gap:7px 10px;font-size:12.5px}
-.dl dt{color:var(--muted);font-weight:600}
-.dl dd{margin:0}
 .src{font-size:11.5px;color:var(--teal);text-decoration:underline dotted}
 .res-good{color:var(--green);font-weight:600} .res-mid{color:var(--amber);font-weight:600} .res-bad{color:var(--red);font-weight:600}
 .overlay{position:fixed;inset:0;background:rgba(20,33,43,.45);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px}
@@ -353,6 +347,21 @@ tbody tr.active{background:var(--teal-soft)}
 .plan-action-saved{padding-top:8px;border-top:1px solid var(--line)}
 .plan-action-saved summary{cursor:pointer;color:var(--teal);font-weight:700}
 #savedPlanActions{display:grid;gap:8px;margin-top:8px}
+
+
+.asset-evidence,#assetEvidenceContent{grid-template-columns:minmax(0,1fr)}
+#assetEvidenceContent{display:grid;gap:14px}
+.asset-studies{min-width:0}
+.asset-evidence-header{display:flex;align-items:center;justify-content:space-between;gap:9px;flex-wrap:wrap}
+.asset-evidence-grid h3 small{font-weight:500;color:var(--muted)}
+.asset-evidence-grid .rd-source{margin-top:0}
+.asset-gap{margin-top:auto;padding:9px 11px;background:#fbf6eb;border-radius:9px}
+.asset-gap .eyebrow{color:#7d4e10}
+.asset-evidence-grid button{align-self:flex-start}
+.asset-evidence-grid button[aria-pressed=true]{border-color:var(--teal);background:var(--teal-soft);color:var(--teal)}
+.asset-studies summary{color:var(--teal);font-weight:700;cursor:pointer}
+.asset-studies .tblwrap{margin-top:9px}
+.asset-studies table{min-width:530px}
 
 </style>
 </head>
@@ -635,7 +644,7 @@ const tagHTML=tags=>tags.map(k=>`<span class="tag ${k}">${TAGL[k]}</span>`).join
 const LV={High:[3,'var(--red)'],Medium:[2,'var(--amber)'],Low:[1,'var(--green)']};
 function compHTML(t){const [n,c]=LV[t.competition];return `<span class="meter">${[0,1,2].map(i=>`<i style="${i<n?'background:'+c:''}"></i>`).join('')}</span><span class="lvl" style="color:${c}">${t.competition}</span>`}
 const T=id=>TARGETS.find(t=>t.id===id);
-let cur=null,tagFilter='all',regionFilter=null,rdMode='evidence',species='All',activeTab='brain';
+let cur=null,tagFilter='all',regionFilter=null,rdMode='evidence',activeTab='brain';
 function toast(msg){const d=document.createElement('div');d.className='toast';d.textContent=msg;document.body.appendChild(d);setTimeout(()=>d.remove(),2200)}
 function matches(q){q=q.trim().toLowerCase();if(!q)return [];
   return TARGETS.filter(t=>[t.sym,t.full,t.indication,t.family,REGIONS[t.region].name,REGIONS[t.region].ko,t.moaShort].join(' ').toLowerCase().includes(q))}
@@ -682,7 +691,7 @@ function goHome(){$('ws').classList.add('hidden');$('intake').classList.add('hid
    WORKSPACE
    ===================================================================== */
 function openTarget(id, tab = activeTab){
-  cur=T(id);regionFilter=null;species='All';
+  cur=T(id);regionFilter=null;
   $('home').classList.add('hidden');$('intake').classList.add('hidden');$('ws').classList.remove('hidden');
   renderSidebar();renderHeader();renderBrainTab();renderMarket();renderRD();
   renderBridge();
@@ -798,32 +807,14 @@ function renderMarket(){
 
 /* ---------- R&D tab ---------- */
 function renderRD(){
-  const t=cur;
-  const modes=[['evidence','근거 검토'],['notes','저장한 리뷰 질문'],['stack','Assets &amp; data stack'],['compare','Compare with past project']];
+  const modes=[['evidence','근거 검토'],['notes','저장한 리뷰 질문'],['stack','자산별 근거 현황'],['compare','Compare with past project']];
   const seg=`<div class="seg rd-modes" aria-label="R&D Analysis">${modes.map(([mode,label]) =>
     `<button aria-pressed="${rdMode===mode}" class="${rdMode===mode?'on':''}" onclick="rdMode='${mode}';renderRD();document.querySelector('.rd-modes [aria-pressed=true]').focus()">${label}</button>`).join('')}</div>`;
-  if(rdMode!=='stack'){
-    $('tab-rd').innerHTML=seg;
-    if(rdMode==='evidence')renderRDEvidence();
-    else if(rdMode==='notes')renderRDNotes();
-    else renderPastProjects();
-    return;
-  }
-  const sp=['All',...new Set(t.invivo.map(v=>v.species))];
-  const rows=t.invivo.filter(v=>species==='All'||v.species===species);
-  $('tab-rd').innerHTML=seg+`
-    <div class="assets">${t.assetData.map(a=>`<div class="card asset">
-      <div class="top"><b>${a.code}</b><span class="pill">${a.stage}</span></div>
-      <dl class="dl"><dt>Safety</dt><dd><span class="st ${a.safety.s}">${a.safety.t}</span></dd>
-      <dt>PK</dt><dd><span class="st ${a.pk.s}">${a.pk.t}</span></dd>
-      <dt>PD</dt><dd><span class="st ${a.pd.s}">${a.pd.t}</span></dd></dl>
-      <div class="sub" style="margin-top:10px">${a.docs} linked documents · ${a.owner}</div></div>`).join('')}</div>
-    <div class="card"><div class="tblhead"><h4>Lab conditions &amp; models tested</h4>
-      <div class="filters">${sp.map(s=>`<button class="${species===s?'on':''}" onclick="species='${s}';renderRD()">${s}</button>`).join('')}</div></div>
-      <div class="tblwrap"><table><thead><tr><th>Species</th><th>Model</th><th>Dose / route</th><th>Duration</th><th>Endpoint</th><th>Result</th><th>Source</th></tr></thead><tbody>
-      ${rows.map(v=>`<tr><td><b>${v.species}</b></td><td>${v.model}</td><td>${v.dose} ${v.route}</td><td>${v.duration}</td><td>${v.endpoint}</td>
-        <td class="res-${v.result[0]}">${v.result[1]}</td><td><span class="src">${v.src}</span></td></tr>`).join('')}
-      </tbody></table></div></div>`;
+  $('tab-rd').innerHTML=seg;
+  if(rdMode==='evidence')renderRDEvidence();
+  else if(rdMode==='notes')renderRDNotes();
+  else if(rdMode==='stack')renderAssetEvidence();
+  else renderPastProjects();
 }
 
 /* =====================================================================
@@ -2004,6 +1995,175 @@ function openPastReview(targetId, caseId, referenceId, referenceIds=[]) {
   ($('selectedProjectTitle') || $('pastCase'))?.focus();
 }
 
+
+const ASSET_EVIDENCE_AREAS = {
+  pk:{label:'PK',name:'노출', gap:'효능 평가를 해석할 때 필요한 노출 시점과 검체의 원자료가 있는가?'},
+  pd:{label:'PD',name:'표적 관여·반응', gap:'효능 결과와 짝지어 볼 수 있는 표적 관여 또는 반응 지표의 원자료가 있는가?'},
+  efficacy:{label:'효능',name:'모델에서의 효과', gap:'모델별 평가 지표의 정의와 대조군·개체별 결과를 확인할 수 있는가?'},
+  safety:{label:'안전성',name:'관찰된 소견', gap:'노출 범위와 관찰 기간을 함께 해석할 수 있는 안전성 기록이 있는가?'}
+};
+
+/* Asset-specific synthetic evidence. Model indexes refer to the target's model list. */
+const ASSET_STUDIES = {
+  'CN-0412':{
+    pk:[2,'혈장과 뇌의 노출 기록이 있으며 자료에 Kp,uu가 포함돼 있습니다.',5],
+    pd:[0,'선조체 pRab10 변화가 기록돼 있습니다. 효능 결과와 짝지을 평가 시점은 발췌본에서 확인하기 어렵습니다.',4],
+    efficacy:[1,'TH+ 세포 수의 군별 결과가 기록돼 있습니다.',8],
+    safety:[3,'폐 조직 소견과 관찰 기간이 정리돼 있습니다.',12]
+  },
+  'CN-0388':{pk:[2,'혈장·뇌 노출 요약이 있습니다. 개체별 자료는 자료 인덱스에 연결되어 있지 않습니다.',3]},
+  'CN-0507':{
+    pd:[0,'GluCer 변화가 대조군과 함께 기록돼 있습니다.',6],
+    efficacy:[1,'로타로드 결과가 군별로 요약돼 있습니다.',9],
+    pk:[2,'혈장과 뇌의 노출 요약이 연결돼 있습니다.',4]
+  },
+  'CN-0233':{
+    pk:[3,'혈장 반감기 요약이 연결돼 있습니다.',5],
+    efficacy:[0,'자발 발작 빈도의 군별 집계가 연결돼 있습니다.',7]
+  },
+  'CN-0251':{efficacy:[1,'MES 모델에서 효과를 평가한 기록이 연결돼 있습니다.',4]},
+  'CN-0119':{
+    efficacy:[1,'Kindling 모델의 군별 발작 점수가 기록돼 있습니다.',7],
+    safety:[2,'반복 투여 관찰에서 방광과 중추신경계 소견을 기록했습니다.',11]
+  },
+  'CN-0611':{
+    pk:[2,'뇌와 혈장의 노출 자료를 정리했습니다.',5],
+    pd:[3,'사람 유래 미세아교세포에서 얻은 활성 기록이 연결돼 있습니다.',8]
+  },
+  'CN-0702':{
+    efficacy:[0,'뇌파로 평가한 각성 시간의 군별 요약이 연결돼 있습니다.',8],
+    safety:[2,'혈압과 심박수의 관찰 기록이 연결돼 있습니다.',10]
+  },
+  'EXT-NV221':{
+    pk:[2,'검토용 패키지에 CSF 노출 요약이 포함돼 있습니다.',4],
+    pd:[3,'미세아교세포의 sTREM2 측정 요약이 포함돼 있습니다.',7]
+  },
+  'CN-0345':{
+    pk:[2,'뇌 노출 요약과 Kp,uu 기록이 연결돼 있습니다.',4],
+    efficacy:[1,'회전 행동의 군별 결과를 기록했습니다.',7]
+  }
+};
+
+const ASSET_GAP_QUESTIONS = {
+  'CN-0412':{
+    pd:'효능 평가 시점과 짝지을 선조체 pRab10 기록을 어느 보고서에서 확인할 수 있는가?',
+    efficacy:'군별 TH+ 세포 수 결과를 평가 시점과 개체별 원자료까지 추적할 수 있는가?',
+    safety:'폐 조직 소견을 해석할 때 대조군과 노출 기록을 함께 확인할 수 있는가?'
+  },
+  'CN-0388':{pk:'혈장·뇌 노출 요약의 개체별 원자료와 측정 시점은 어디에 기록돼 있는가?'},
+  'CN-0233':{efficacy:'발작 빈도 비교에 필요한 개체별 관찰 기간과 집계 기준이 기록돼 있는가?'}
+};
+const assetEvidenceSelection = new Map();
+
+function assetEvidence(target, code) {
+  return Object.entries(ASSET_EVIDENCE_AREAS).map(([id,area],index) => {
+    const entry = ASSET_STUDIES[code]?.[id];
+    let study = null;
+    if (entry) {
+      const [modelIndex,summary,page] = entry;
+      const [species,model,endpoint] = target.models[modelIndex];
+      const document = {source:`${code} · ${area.label} 검토 보고서.pdf`,location:`p. ${page} · 결과 요약`,excerpt:summary};
+      study = {species,model,endpoint,summary,document};
+    }
+    const inventory = {
+      source:`${code} · 자료 인덱스.pdf`,
+      location:`표 ${index+1} · ${area.label} 연결 목록`,
+      excerpt:study ? '이 분류에 자산별 요약 보고서 1건이 연결돼 있습니다.' : '이 분류에 연결된 자산별 보고서가 없습니다.'
+    };
+    return {...area,id,study,inventory,question:ASSET_GAP_QUESTIONS[code]?.[id] || area.gap};
+  });
+}
+
+function assetGapSelection(target, questionId) {
+  if (typeof questionId !== 'string') return null;
+  const [code,area,...rest] = questionId.split(':');
+  if (!rest.length && target.assets.includes(code) && Object.hasOwn(ASSET_EVIDENCE_AREAS, area)) return {code,area};
+  return null;
+}
+
+function renderAssetEvidence() {
+  const previous = assetEvidenceSelection.get(cur.id);
+  $('tab-rd').insertAdjacentHTML('beforeend', `<section class="rd-review asset-evidence" lang="ko">
+    <div class="card rd-question">
+      <div><h2 id="assetEvidenceTitle" tabindex="-1">${cur.sym} 자산별 근거 현황</h2>
+        <p class="sub">연결된 합성 보고서와 다음 리뷰에서 확인할 내용을 보여줍니다.</p></div>
+      <label for="rdAssetSelect">검토할 자산
+        <select id="rdAssetSelect">${cur.assets.map(code=>`<option value="${code}">${code}</option>`).join('')}</select>
+      </label>
+    </div>
+    <div id="assetEvidenceContent"></div>
+  </section>`);
+  const select = $('rdAssetSelect');
+  select.value = previous?.code || cur.assets[0];
+  select.addEventListener('change',() => setAssetEvidence(select.value));
+  setAssetEvidence(select.value, previous?.area);
+}
+
+function setAssetEvidence(code, selectedArea) {
+  const asset = cur.assetData.find(item=>item.code===code);
+  const evidence = assetEvidence(cur, code);
+  const studies = evidence.filter(area=>area.study);
+  assetEvidenceSelection.set(cur.id,{code,area:selectedArea});
+  $('assetEvidenceContent').innerHTML = `<div class="card asset-evidence-header">
+    <div><h3>${code}</h3><p class="sub">${asset.stage} · 근거가 연결된 영역 ${studies.length}/4개</p></div>
+    <button type="button" class="btn ghost compact" id="showAssetStudies">관련 실험표 보기</button>
+  </div>
+  <div class="rd-pair asset-evidence-grid">${evidence.map(area=>`<article class="card rd-evidence" data-asset-area="${area.id}">
+    <div class="related-project-head"><h3>${area.label} <small>${area.name}</small></h3>
+      <span class="tag ${area.study?'rd':'bd'}">${area.study?'근거 연결':'연결 자료 없음'}</span></div>
+    <div><p class="eyebrow">확보 근거</p><p>${area.study?.summary || '현재 이 자산에 연결된 보고서가 없습니다.'}</p></div>
+    ${pastSource(area.study?.document || area.inventory)}
+    <div class="asset-gap"><p class="eyebrow">확인할 공백</p><p>${area.question}</p></div>
+    <button type="button" class="btn ghost compact" data-asset-gap="${area.id}" aria-controls="assetGapEditor"
+      aria-pressed="false">리뷰 질문으로 작성</button>
+  </article>`).join('')}</div>
+  <div id="assetGapEditor" class="hidden"></div>
+  <details class="card asset-studies" id="assetStudies">
+    <summary>${code} 관련 실험표 · ${studies.length}건</summary>
+    <div class="tblwrap"><table>
+      <thead><tr><th scope="col">영역</th><th scope="col">종·모델</th><th scope="col">평가 지표</th><th scope="col">기록된 결과</th><th scope="col">보고서 위치</th></tr></thead>
+      <tbody>${studies.map(({label,study})=>`<tr><td>${label}</td><td>${study.species} · ${study.model}</td><td>${study.endpoint}</td>
+        <td>${study.summary}</td><td>${study.document.source} · ${study.document.location}</td></tr>`).join('') ||
+        '<tr><td colspan="5">이 자산에 연결된 실험이 없습니다.</td></tr>'}</tbody>
+    </table></div>
+  </details>`;
+  $('showAssetStudies').addEventListener('click',() => {
+    $('assetStudies').open = true;
+    $('assetStudies').querySelector('summary').focus();
+  });
+  document.querySelectorAll('[data-asset-gap]').forEach(button => {
+    button.addEventListener('click',() => {
+      const area = evidence.find(item=>item.id===button.dataset.assetGap);
+      renderAssetGap(code,area);
+      $('rdNoteText').focus();
+    });
+  });
+  if (selectedArea) renderAssetGap(code,evidence.find(area=>area.id===selectedArea));
+}
+
+function renderAssetGap(code, area) {
+  assetEvidenceSelection.set(cur.id,{code,area:area.id});
+  document.querySelectorAll('[data-asset-gap]').forEach(button => {
+    button.setAttribute('aria-pressed', String(button.dataset.assetGap===area.id));
+  });
+  const editor = $('assetGapEditor');
+  editor.classList.remove('hidden');
+  editor.innerHTML = rdNoteForm(`${code} · ${area.label} 공백에 남길 질문`,'질문과 출처 저장');
+  const source = $('rdReferenceSource');
+  const sources = [area.study?.document, area.inventory];
+  source.textContent = '함께 저장할 출처 · ' + sources.filter(Boolean).map(doc=>`${doc.source} · ${doc.location}`).join(' / ');
+  source.classList.remove('hidden');
+  bindRDNote({mode:'stack',questionId:code+':'+area.id,next:area.question,sources});
+}
+
+function openAssetReview(targetId, questionId) {
+  const selection = assetGapSelection(T(targetId),questionId);
+  if (selection) assetEvidenceSelection.set(targetId,selection);
+  rdMode = 'stack';
+  openTarget(targetId,'rd');
+  ($('rdNoteText') || $('assetEvidenceTitle')).focus();
+}
+
 const RD_NOTES_KEY = 'targetbridge.rd-review.v1';
 const rdSelection = new Map();
 const rdNotes = loadReviewNotes();
@@ -2017,6 +2177,7 @@ function loadReviewNotes() {
       if (!note || typeof note.text !== 'string') return false;
       const target = T(note.targetId);
       if (!target) return false;
+      if (note.mode === 'stack') return Boolean(assetGapSelection(target,note.questionId));
       const cases = note.mode === 'compare' ? PAST_PROJECTS[target.id] || [] : rdQuestions(target);
       return cases.some(item => item.id === note.questionId);
     }).map(note => {
@@ -2229,17 +2390,19 @@ function renderRDNotes() {
   $('rdSavedNotes').innerHTML = rdNotes.map(note => {
     const target = T(note.targetId);
     const past = note.mode === 'compare';
-
+    const asset = note.mode === 'stack' && assetGapSelection(target,note.questionId);
+    const openLabel = past ? '과거 프로젝트 비교 열기' : asset ? '자산 근거 열기' : '근거 비교 열기';
+    const sourceLabels = past ? ['과거 보고서','현재 계획서'] : asset ? ['자산 보고서','자료 인덱스'] : ['내부','외부'];
     return `<article class="rd-saved-note">
       <div class="rd-saved-summary">
-        <div class="rd-saved-heading"><span class="pill">${target.sym}</span><span class="pill review-status"></span></div>
-        <button class="btn ghost compact rd-open-comparison">${past ? '과거 프로젝트 비교 열기' : '근거 비교 열기'}</button>
+        <div class="rd-saved-heading"><span class="pill">${target.sym}${asset ? ' · '+asset.code+' · '+ASSET_EVIDENCE_AREAS[asset.area].label : ''}</span><span class="pill review-status"></span></div>
+        <button class="btn ghost compact rd-open-comparison">${openLabel}</button>
       </div>
       <p class="rd-saved-text"></p>
       <p class="sub rd-saved-reason hidden"></p>
       <div class="rd-saved-guide hidden"></div>
       <details class="rd-saved-citations"><summary>저장한 출처</summary>
-        <ul class="rd-saved-sources"><li>${past ? '과거 보고서' : '내부'} · </li><li>${past ? '현재 계획서' : '외부'} · </li>${past && note.sources?.[2] ? '<li>참고 프로젝트 보고서 · </li>' : ''}${past && note.sources?.[3] ? '<li>두 번째 참고 프로젝트 보고서 · </li>' : ''}</ul>
+        <ul class="rd-saved-sources">${sourceLabels.map(label=>`<li>${label} · </li>`).join('')}${past && note.sources?.[2] ? '<li>참고 프로젝트 보고서 · </li>' : ''}${past && note.sources?.[3] ? '<li>두 번째 참고 프로젝트 보고서 · </li>' : ''}</ul>
       </details>
       ${reviewOutcomeForm()}
     </article>`;
@@ -2248,6 +2411,7 @@ function renderRDNotes() {
     const note = rdNotes[index];
     article.querySelector('.rd-open-comparison').addEventListener('click', () => {
       if (note.mode === 'compare') openPastReview(note.targetId,note.questionId,note.referenceId,noteReferenceIds(note));
+      else if (note.mode === 'stack') openAssetReview(note.targetId,note.questionId);
       else openRDReview(note.targetId,note.questionId);
     });
     article.querySelector('.rd-saved-text').textContent = note.text;
@@ -2297,11 +2461,19 @@ if(demoParams.get('view')==='rd' && T(linkedTarget)){
       pastSelection.set(linkedTarget,project.id);
       pastReferences.set(project,{ids,active:ids[0]});
     }
+  } else if (demoParams.get('mode')==='stack'){
+    rdMode='stack';
+    const target=T(linkedTarget);
+    const requested=demoParams.get('asset');
+    const code=target.assets.includes(requested) ? requested : target.assets[0];
+    const selection=assetGapSelection(target,code+':'+demoParams.get('gap'));
+    assetEvidenceSelection.set(target.id,selection || {code});
   }
   openTarget(linkedTarget,'rd');
   const section=demoParams.get('section');
   const headings={reuse:'projectReuseTitle',precedents:'selectedProjectTitle',plan:'planActionTitle'};
-  const heading=location.hash==='#relatedProjectTitle' ? 'relatedProjectTitle' : headings[section] || 'projectPromptsTitle';
+  const heading=rdMode==='stack' ? ($('rdNoteText') ? 'rdNoteText' : 'assetEvidenceTitle') :
+    location.hash==='#relatedProjectTitle' ? 'relatedProjectTitle' : headings[section] || 'projectPromptsTitle';
   $(heading)?.focus();
 }
 </script>
