@@ -160,17 +160,6 @@ tbody tr.active{background:var(--teal-soft)}
 .dl dd{margin:0}
 .src{font-size:11.5px;color:var(--teal);text-decoration:underline dotted}
 .res-good{color:var(--green);font-weight:600} .res-mid{color:var(--amber);font-weight:600} .res-bad{color:var(--red);font-weight:600}
-.docpick{display:grid;grid-template-columns:1fr auto 1fr auto;gap:10px;align-items:end;margin-bottom:16px}
-select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:10px;font-family:inherit;font-size:13px;background:#fff;color:var(--ink)}
-.vs{font-weight:700;color:var(--faint);padding-bottom:9px}
-.diff td.same{color:var(--muted)}
-.diff tr.d td.v{background:#fff7e8}
-.diff .mk{font-size:11px;font-weight:700}
-.insight{border-left:3px solid var(--purple);background:var(--purple-soft);border-radius:0 12px 12px 0;padding:14px 16px;margin-top:14px;font-size:13px}
-.insight b{color:var(--purple)}
-.insight ul{margin:6px 0 0;padding-left:18px}
-
-/* modal */
 .overlay{position:fixed;inset:0;background:rgba(20,33,43,.45);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px}
 .modal{background:#fff;border-radius:18px;width:100%;max-width:860px;max-height:90vh;overflow:auto;padding:22px 24px}
 .modal h2{margin:0 0 4px;font-size:20px}
@@ -191,8 +180,8 @@ select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:10
   #ws{grid-template-columns:1fr} aside{position:static;height:auto}
   .grid2{grid-template-columns:1fr} .kpis{grid-template-columns:repeat(2,1fr)}
   .lanes{grid-template-columns:repeat(3,1fr)} .prow{grid-template-columns:90px 1fr 20px}
-  .prow .hide-s{display:none} .rtypes{grid-template-columns:1fr} .docpick{grid-template-columns:1fr}
-  .vs{display:none} main{padding:16px}
+  .prow .hide-s{display:none} .rtypes{grid-template-columns:1fr}
+  main{padding:16px}
 }
 @media print{
   body *{visibility:hidden}
@@ -291,6 +280,9 @@ select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:10
 .rd-saved-note ul{margin:5px 0 0;padding-left:18px;overflow-wrap:anywhere;font-size:13px}
 @media(max-width:680px){.rd-question,.rd-pair{grid-template-columns:minmax(0,1fr)}}
 
+#pastReviewContent{display:grid;gap:14px}
+.past-assessment[data-status=included]{border-left-color:var(--green)}
+.past-assessment[data-status=pending]{border-left-color:var(--red)}
 </style>
 </head>
 <body>
@@ -561,24 +553,7 @@ TARGETS.forEach(t=>{
            pd:{ok:'Target engagement 80% @10 mg/kg',watch:'TE shown, efficacy partial',gap:'No PD biomarker yet'}};
   t.assetData=t.assets.map((code,i)=>{const o={code,stage:i===0?t.stage:'Backup',docs:8+Math.floor(r()*40),owner:pick(r,['Neuro Pharm. Lab 1','Neuro Pharm. Lab 2','DMPK team','BD scouting'])};
     ['safety','pk','pd'].forEach(k=>{const s=pick(r,['ok','ok','watch','gap']);o[k]={s,t:S[k][s]}});return o;});
-  // documents for "compare with past project"
-  t.docs=[
-    {id:t.id+'d1',name:`PRJ-2017-09 · ${t.sym} efficacy final report (terminated)`,team:'R&D archive'},
-    {id:t.id+'d2',name:`PRJ-2020-11 · ${t.sym} PK/PD bridging study`,team:'R&D archive'},
-    {id:t.id+'d3',name:`${t.assets[0]} · Study plan v2 (current)`,team:'R&D current'},
-    {id:t.id+'d4',name:`BD data room · ${t.comps[t.comps.length-1].asset} efficacy package`,team:'BD'}
-  ];
 });
-
-function docRecord(t,doc){
-  const r=rng(doc.id);const m=t.models[Math.floor(r()*2)];
-  return {Species:m[0],Model:m[1],'Dose / route':`${pick(r,[3,10,30])} mg/kg ${pick(r,['PO','IP'])} ${pick(r,['QD','BID'])}`,
-    Duration:pick(r,['14 d','28 d','8 wk']),'n / group':pick(r,['8','10','12']),'Primary endpoint':m[2],
-    'Biomarker':pick(r,['Plasma exposure only','CSF target engagement','Brain pTarget ratio']),
-    Outcome:pick(r,['Met primary endpoint','Trend, not significant','Did not meet endpoint']),
-    'Safety finding':pick(r,['None','Mild body-weight loss (≤8%)','Liver enzyme ↑ at top dose']),
-    Status:doc.id.endsWith('d1')?'Stopped: exposure–efficacy gap':doc.id.endsWith('d4')?'External, under BD review':'Active'};
-}
 
 /* =====================================================================
    HELPERS
@@ -756,58 +731,28 @@ function renderRD(){
   const modes=[['evidence','근거 검토'],['notes','저장한 리뷰 질문'],['stack','Assets &amp; data stack'],['compare','Compare with past project']];
   const seg=`<div class="seg rd-modes" aria-label="R&D Analysis">${modes.map(([mode,label]) =>
     `<button aria-pressed="${rdMode===mode}" class="${rdMode===mode?'on':''}" onclick="rdMode='${mode}';renderRD();document.querySelector('.rd-modes [aria-pressed=true]').focus()">${label}</button>`).join('')}</div>`;
-  if(rdMode==='evidence'||rdMode==='notes'){
+  if(rdMode!=='stack'){
     $('tab-rd').innerHTML=seg;
     if(rdMode==='evidence')renderRDEvidence();
-    else renderRDNotes();
+    else if(rdMode==='notes')renderRDNotes();
+    else renderPastProjects();
     return;
   }
-  if(rdMode==='stack'){
-    const sp=['All',...new Set(t.invivo.map(v=>v.species))];
-    const rows=t.invivo.filter(v=>species==='All'||v.species===species);
-    $('tab-rd').innerHTML=seg+`
-      <div class="assets">${t.assetData.map(a=>`<div class="card asset">
-        <div class="top"><b>${a.code}</b><span class="pill">${a.stage}</span></div>
-        <dl class="dl"><dt>Safety</dt><dd><span class="st ${a.safety.s}">${a.safety.t}</span></dd>
-        <dt>PK</dt><dd><span class="st ${a.pk.s}">${a.pk.t}</span></dd>
-        <dt>PD</dt><dd><span class="st ${a.pd.s}">${a.pd.t}</span></dd></dl>
-        <div class="sub" style="margin-top:10px">${a.docs} linked documents · ${a.owner}</div></div>`).join('')}</div>
-      <div class="card"><div class="tblhead"><h4>Lab conditions &amp; models tested</h4>
-        <div class="filters">${sp.map(s=>`<button class="${species===s?'on':''}" onclick="species='${s}';renderRD()">${s}</button>`).join('')}</div></div>
-        <div class="tblwrap"><table><thead><tr><th>Species</th><th>Model</th><th>Dose / route</th><th>Duration</th><th>Endpoint</th><th>Result</th><th>Source</th></tr></thead><tbody>
-        ${rows.map(v=>`<tr><td><b>${v.species}</b></td><td>${v.model}</td><td>${v.dose} ${v.route}</td><td>${v.duration}</td><td>${v.endpoint}</td>
-          <td class="res-${v.result[0]}">${v.result[1]}</td><td><span class="src">${v.src}</span></td></tr>`).join('')}
-        </tbody></table></div></div>`;
-  } else {
-    const opts=sel=>t.docs.map(d=>`<option value="${d.id}" ${d.id===sel?'selected':''}>[${d.team}] ${d.name}</option>`).join('');
-    $('tab-rd').innerHTML=seg+`
-      <div class="card">
-        <div class="docpick">
-          <div><div class="lbl">Document A</div><select id="docA">${opts(t.docs[0].id)}</select></div>
-          <div class="vs">vs</div>
-          <div><div class="lbl">Document B</div><select id="docB">${opts(t.docs[2].id)}</select></div>
-          <button class="btn primary" onclick="runCompare()">Compare</button>
-        </div>
-        <div id="cmpOut"></div>
-      </div>`;
-    runCompare();
-  }
-}
-function runCompare(){
-  const t=cur,a=t.docs.find(d=>d.id===$('docA').value)||t.docs[0],b=t.docs.find(d=>d.id===$('docB').value)||t.docs[2];
-  const A=docRecord(t,a),B=docRecord(t,b);
-  const keys=Object.keys(A);const diffs=keys.filter(k=>A[k]!==B[k]);
-  const tips=[];
-  if(A.Species!==B.Species||A.Model!==B.Model) tips.push(`Model changed (${A.Model} → ${B.Model}). Bridge with a short PK study before comparing efficacy.`);
-  if(A.Biomarker!==B.Biomarker) tips.push(`Biomarker strategy differs. ${/CSF|Brain/.test(B.Biomarker)?'B adds a central readout, which fixes the gap seen in A.':'Consider adding a CSF/brain target-engagement readout; plasma-only was a weakness before.'}`);
-  if(A['Safety finding']!=='None') tips.push(`A reported “${A['Safety finding']}”. Add liver panel / body-weight monitoring to B.`);
-  if(A.Duration!==B.Duration) tips.push(`Dosing duration ${A.Duration} vs ${B.Duration}; align before drawing conclusions.`);
-  if(!tips.length) tips.push('Recorded conditions are similar. Check assay methods, controls, and sampling before comparing results.');
-  $('cmpOut').innerHTML=`<div class="tblwrap"><table class="diff"><thead><tr><th>Condition</th><th>A · ${a.name}</th><th>B · ${b.name}</th><th></th></tr></thead><tbody>
-    ${keys.map(k=>{const d=A[k]!==B[k];return `<tr class="${d?'d':''}"><td><b>${k}</b></td><td class="v ${d?'':'same'}">${A[k]}</td><td class="v ${d?'':'same'}">${B[k]}</td>
-    <td class="mk" style="color:${d?'var(--amber)':'var(--green)'}">${d?'≠ differs':'= same'}</td></tr>`}).join('')}
-    </tbody></table></div>
-    <div class="insight"><b>✦ AI comparison summary (simulated)</b>: ${diffs.length} of ${keys.length} conditions differ.<ul>${tips.map(x=>`<li>${x}</li>`).join('')}</ul></div>`;
+  const sp=['All',...new Set(t.invivo.map(v=>v.species))];
+  const rows=t.invivo.filter(v=>species==='All'||v.species===species);
+  $('tab-rd').innerHTML=seg+`
+    <div class="assets">${t.assetData.map(a=>`<div class="card asset">
+      <div class="top"><b>${a.code}</b><span class="pill">${a.stage}</span></div>
+      <dl class="dl"><dt>Safety</dt><dd><span class="st ${a.safety.s}">${a.safety.t}</span></dd>
+      <dt>PK</dt><dd><span class="st ${a.pk.s}">${a.pk.t}</span></dd>
+      <dt>PD</dt><dd><span class="st ${a.pd.s}">${a.pd.t}</span></dd></dl>
+      <div class="sub" style="margin-top:10px">${a.docs} linked documents · ${a.owner}</div></div>`).join('')}</div>
+    <div class="card"><div class="tblhead"><h4>Lab conditions &amp; models tested</h4>
+      <div class="filters">${sp.map(s=>`<button class="${species===s?'on':''}" onclick="species='${s}';renderRD()">${s}</button>`).join('')}</div></div>
+      <div class="tblwrap"><table><thead><tr><th>Species</th><th>Model</th><th>Dose / route</th><th>Duration</th><th>Endpoint</th><th>Result</th><th>Source</th></tr></thead><tbody>
+      ${rows.map(v=>`<tr><td><b>${v.species}</b></td><td>${v.model}</td><td>${v.dose} ${v.route}</td><td>${v.duration}</td><td>${v.endpoint}</td>
+        <td class="res-${v.result[0]}">${v.result[1]}</td><td><span class="src">${v.src}</span></td></tr>`).join('')}
+      </tbody></table></div></div>`;
 }
 
 /* =====================================================================
@@ -1212,6 +1157,131 @@ function rdQuestions(target) {
 }
 
 
+
+/* Synthetic project excerpts for comparing designs during a plan review. */
+const PAST_PROJECTS = {
+  lrrk2:[
+    {
+      id:'target-engagement', title:'표적 관여와 효능을 함께 해석할 수 있나?',
+      status:'partial', summary:'뇌 표적 관여 측정은 추가됐습니다. 효능 평가와 연결할 기준은 계획서에 기재되지 않았습니다.',
+      past:{source:'PRJ-2017-09 · LRRK2 최종 보고서.pdf', location:'p. 12 결과 · p. 19 결론',
+        excerpt:'혈장 노출이 확인되었다. 평가 시점의 뇌 표적 관여 자료는 수집되지 않았다. 최종 검토에서 효능 결과의 해석을 보류했다.'},
+      plan:{source:'CN-0412 · LRRK2 연구계획서 v2.pdf', location:'§ 4.2 평가 지표',
+        excerpt:'뇌 조직의 pRab10을 표적 관여 지표로 기록한다. 효능 분석은 계획서의 효능 평가 항목을 따른다.'},
+      observation:'혈장 노출은 확인됐고, 뇌 표적 관여 측정 자료는 없었습니다.',
+      interpretation:'보고서는 효능 결과를 표적 관여와 연결하기 어렵다고 판단해 해석을 보류했습니다.',
+      change:'현재 계획은 뇌 조직 pRab10을 표적 관여 지표에 추가했습니다.',
+      next:'뇌 표적 관여 결과를 어떤 효능 평가 시점과 짝지어 해석할 것인가?'
+    },
+    {
+      id:'reporting-completeness', title:'군별 결과를 같은 기준으로 검토할 수 있나?',
+      status:'included', summary:'과거 보고서에서 해석을 제한한 누락 사유를 군별로 기록하도록 계획에 반영했습니다.',
+      past:{source:'PRJ-2020-11 · LRRK2 분석 보고서.pdf', location:'p. 8 결과 · p. 10 한계',
+        excerpt:'군별 결과표에 분석 제외 건수가 집계되었다. 개별 제외 사유가 표에 없어 결과의 민감도를 검토하기 어려웠다.'},
+      plan:{source:'CN-0412 · LRRK2 연구계획서 v2.pdf', location:'§ 6.1 분석 대상과 제외 기록',
+        excerpt:'군별 총 관찰 건수, 분석에 포함된 건수와 제외 사유를 결과표에 기록한다.'},
+      observation:'과거 결과표에는 군별 분석 제외 건수가 기록됐습니다.',
+      interpretation:'보고서는 제외 사유를 확인할 수 없어 해당 제외가 결과 해석에 미친 영향을 검토하기 어렵다고 적었습니다.',
+      change:'현재 계획은 군별 전체·분석 대상 건수와 제외 사유를 함께 기록하도록 명시했습니다.',
+      next:'리뷰에서 제외 전후 결과를 함께 확인할 필요가 있는 경우를 어떻게 정할 것인가?'
+    }
+  ],
+  nav16:[
+    {
+      id:'event-definition', title:'발작 판독 기준을 과거보다 일관되게 적용할 수 있나?',
+      status:'included', summary:'과거에 달랐던 발작 사건 정의와 판독자 간 이견 처리 방식을 계획서에 명시했습니다.',
+      past:{source:'PRJ-2019-14 · SCN8A 발작 판독 검토.pdf', location:'p. 7 판독 결과 · p. 11 논의',
+        excerpt:'같은 관찰 기록에서 판독자별 집계가 달랐다. 경계 사례의 분류 기준이 통일되지 않아 군 간 차이의 해석이 제한됐다.'},
+      plan:{source:'CN-0233 · SCN8A 연구계획서 v2.pdf', location:'§ 5.3 발작 정의와 판독',
+        excerpt:'집계할 발작 사건의 정의를 분석 전에 확정한다. 독립 판독 결과가 다르면 합의 결과와 근거를 기록한다.'},
+      observation:'동일한 관찰 기록에서 판독자별 발작 횟수가 달랐습니다.',
+      interpretation:'과거 보고서는 경계 사례의 집계 기준 차이를 군 간 비교의 한계로 기록했습니다.',
+      change:'현재 계획은 사전 사건 정의, 독립 판독, 이견과 합의 근거 기록을 추가했습니다.',
+      next:'판독 기준이 애매한 사례는 어떤 방식으로 공유하고, 집계에 미친 영향은 어떻게 확인할 것인가?'
+    }
+  ],
+  nlrp3:[
+    {
+      id:'baseline-records', title:'과거 결과의 편차를 설명할 기록이 충분한가?',
+      status:'pending', summary:'실험 회차별 편차는 보고됐습니다. 당시 대조군 기록이 제공된 발췌본에 없어 원인과 변경 효과를 판단하기 어렵습니다.',
+      past:{source:'PRJ-2021-03 · NLRP3 세포 평가 보고서.pdf', location:'p. 5 결과 · 부록 B 미첨부',
+        excerpt:'실험 회차별 IL-1β 값의 편차가 관찰됐다. 회차별 대조군 원자료는 부록 B를 참조한다. 제공된 발췌본에는 부록이 포함되지 않았다.'},
+      plan:{source:'CN-0611 · NLRP3 연구계획서 v2.pdf', location:'§ 4.4 결과 기록',
+        excerpt:'회차별 측정값과 대조군 요약값을 결과에 첨부한다.'},
+      observation:'회차별 IL-1β 측정값에 편차가 관찰됐습니다.',
+      interpretation:'제공된 보고서에는 편차 원인에 대한 결론이 없습니다. 대조군 원자료는 미첨부 부록에 있습니다.',
+      change:'현재 계획은 회차별 대조군 요약값을 결과에 함께 기록하도록 했습니다.',
+      next:'누락된 부록에서 어떤 대조군 기록을 확인해야 과거 편차를 검토할 수 있는가?'
+    }
+  ]
+};
+const PAST_PROJECT_STATUS = {
+  partial:{label:'일부 반영', style:'watch'},
+  included:{label:'계획에 반영', style:'ok'},
+  pending:{label:'판단 보류', style:'gap'}
+};
+const pastSelection = new Map();
+
+function renderPastProjects() {
+  const cases = PAST_PROJECTS[cur.id] || [];
+  $('tab-rd').insertAdjacentHTML('beforeend', `<section class="rd-review" lang="ko">
+    <div class="rd-question card">
+      <div><h2>${cur.sym} 과거 프로젝트 검토</h2><p class="sub">과거 보고서와 현재 계획서를 대조하는 합성 사례입니다.</p></div>
+      ${cases.length ? `<label for="pastCase">검토할 사례
+        <select id="pastCase">${cases.map(item=>`<option value="${item.id}">${item.title}</option>`).join('')}</select>
+      </label>` : ''}
+      <nav class="rd-example-links" aria-label="과거 프로젝트 사례가 있는 타겟">${Object.keys(PAST_PROJECTS).map(id=>
+        `<button type="button" class="btn ghost compact" onclick="openPastReview('${id}')" ${cur.id===id?'aria-current="true"':''}>${T(id).sym}</button>`).join('')}</nav>
+    </div>
+    <div id="pastReviewContent">${cases.length?'':'<section class="card"><h3>연결된 과거 프로젝트 사례가 없습니다</h3><p class="sub">위 타겟에서 과거 보고서와 현재 계획서를 비교할 수 있습니다.</p></section>'}</div>
+  </section>`);
+  if (!cases.length) return;
+  const select = $('pastCase');
+  select.value = pastSelection.get(cur.id) || cases[0].id;
+  function showCase() {
+    pastSelection.set(cur.id, select.value);
+    renderPastCase(cases.find(item=>item.id===select.value));
+  }
+  select.addEventListener('change', showCase);
+  showCase();
+}
+
+function renderPastCase(item) {
+  const status = PAST_PROJECT_STATUS[item.status];
+  $('pastReviewContent').innerHTML = `<section class="card rd-assessment past-assessment" data-status="${item.status}">
+    <h3><span class="st ${status.style}">${status.label}</span></h3><p>${item.summary}</p>
+  </section>
+  <div class="rd-pair">
+    <article class="card rd-evidence">
+      <p class="eyebrow">과거 보고서</p>
+      <dl><div><dt>과거 관찰</dt><dd>${item.observation}</dd></div>
+        <div><dt>당시 해석</dt><dd>${item.interpretation}</dd></div></dl>
+      ${pastSource(item.past)}
+    </article>
+    <article class="card rd-evidence rd-external">
+      <p class="eyebrow">현재 계획서</p>
+      <dl><div><dt>현재 계획의 변경점</dt><dd>${item.change}</dd></div></dl>
+      ${pastSource(item.plan)}
+    </article>
+  </div>
+  ${rdNoteForm('남은 질문', '두 문서 출처와 함께 저장')}`;
+  bindRDNote({mode:'compare',questionId:item.id,next:item.next,sources:[item.past,item.plan]});
+}
+
+function pastSource(source) {
+  return `<div class="rd-source">
+    <details><summary>${source.source} · 발췌 보기</summary><p>${source.excerpt}</p></details>
+    <p class="sub">${source.location}</p>
+  </div>`;
+}
+
+function openPastReview(targetId, caseId) {
+  if (caseId) pastSelection.set(targetId, caseId);
+  rdMode = 'compare';
+  openTarget(targetId, 'rd');
+  $('pastCase')?.focus();
+}
+
 const RD_NOTES_KEY = 'targetbridge.rd-review.v1';
 const rdSelection = new Map();
 const rdNotes = loadReviewNotes();
@@ -1220,8 +1290,14 @@ function loadReviewNotes() {
   try {
     const stored = JSON.parse(localStorage.getItem(RD_NOTES_KEY) || '[]');
     if (!Array.isArray(stored)) return [];
-    return stored.filter(note => note && typeof note.text === 'string' &&
-      TARGETS.some(target => target.id === note.targetId && rdQuestions(target).some(question => question.id === note.questionId)));
+    // Notes from the original external evidence view have no mode field.
+    return stored.filter(note => {
+      if (!note || typeof note.text !== 'string') return false;
+      const target = T(note.targetId);
+      if (!target) return false;
+      const cases = note.mode === 'compare' ? PAST_PROJECTS[target.id] || [] : rdQuestions(target);
+      return cases.some(item => item.id === note.questionId);
+    });
   } catch {
     return [];
   }
@@ -1274,29 +1350,38 @@ function renderRDComparison() {
     ${rdEvidenceCard('내부 실험 · 합성 샘플', question.internal, 'rd-internal')}
     ${rdEvidenceCard('외부 근거 · 공개 출처', question.external, 'rd-external')}
   </div>
-  <form id="rdNoteForm" class="card rd-note">
-    <label for="rdNoteText">리뷰에 남길 질문</label>
+  ${rdNoteForm('리뷰에 남길 질문', '출처와 함께 저장')}`;
+  bindRDNote({mode:'evidence', questionId:question.id, next:question.next, sources:[question.internal,question.external]});
+}
+
+function rdNoteForm(label, button) {
+  return `<form id="rdNoteForm" class="card rd-note">
+    <label for="rdNoteText">${label}</label>
     <textarea id="rdNoteText" required maxlength="1000" rows="3"></textarea>
     <div class="rd-note-actions">
-      <button class="btn primary" type="submit">출처와 함께 저장</button>
+      <button class="btn primary" type="submit">${button}</button>
       <p class="sub" id="rdSaveStatus" role="status"></p>
     </div>
   </form>`;
-  $('rdNoteText').value = question.next;
+}
+
+function bindRDNote({mode,questionId,next,sources}) {
+  const targetId = cur.id;
+  const input = $('rdNoteText');
+  input.value = next;
   $('rdNoteForm').addEventListener('submit', event => {
     event.preventDefault();
-    const input = $('rdNoteText');
     const note = {
-      targetId:cur.id, questionId:question.id, text:input.value.trim(),
-      sources:[question.internal, question.external].map(item =>
-        item ? {name:item.source, location:item.location, url:item.url} : null)
+      targetId, mode, questionId, text:input.value.trim(),
+      sources:sources.map(item => item ? {name:item.source, location:item.location, url:item.url} : null)
     };
     if (!note.text) {
       $('rdSaveStatus').textContent = '저장할 질문을 입력하세요.';
       input.focus();
       return;
     }
-    if (rdNotes.some(saved => saved.targetId === note.targetId && saved.questionId === note.questionId && saved.text === note.text)) {
+    if (rdNotes.some(saved => (saved.mode || 'evidence') === mode && saved.targetId === targetId &&
+      saved.questionId === questionId && saved.text === note.text)) {
       $('rdSaveStatus').textContent = '이미 저장된 질문입니다. 저장한 리뷰 질문에서 확인할 수 있습니다.';
       return;
     }
@@ -1324,17 +1409,18 @@ function renderRDNotes() {
     <div id="rdSavedNotes"></div>
   </section>`);
   if (!rdNotes.length) {
-    $('rdSavedNotes').textContent = '저장한 질문이 없습니다. 근거 검토에서 질문을 저장하세요.';
+    $('rdSavedNotes').textContent = '저장한 질문이 없습니다. 근거 검토나 과거 프로젝트 비교에서 질문을 저장하세요.';
     return;
   }
   $('rdSavedNotes').innerHTML = rdNotes.map(note => {
     const target = T(note.targetId);
-    const question = rdQuestions(target).find(item => item.id === note.questionId);
+    const past = note.mode === 'compare';
+    const open = past ? 'openPastReview' : 'openRDReview';
     return `<article class="rd-saved-note">
       <div class="rd-saved-heading"><span class="pill">${target.sym}</span>
-        <button class="btn ghost compact" onclick="openRDReview('${target.id}', '${question.id}')">근거 비교 열기</button></div>
+        <button class="btn ghost compact" onclick="${open}('${target.id}', '${note.questionId}')">${past ? '과거 프로젝트 비교 열기' : '근거 비교 열기'}</button></div>
       <p class="rd-saved-text"></p>
-      <ul><li>내부 · </li><li>외부 · </li></ul>
+      <ul><li>${past ? '과거 보고서' : '내부'} · </li><li>${past ? '현재 계획서' : '외부'} · </li></ul>
     </article>`;
   }).join('');
   $('rdSavedNotes').querySelectorAll('.rd-saved-note').forEach((article,index) => {
@@ -1369,7 +1455,10 @@ attachSearch($('sideSearch'),$('sideDrop'));
 
 const demoParams=new URLSearchParams(location.search);
 const linkedTarget=demoParams.get('target');
-if(demoParams.get('view')==='rd' && T(linkedTarget))openTarget(linkedTarget,'rd');
+if(demoParams.get('view')==='rd' && T(linkedTarget)){
+  if(demoParams.get('mode')==='compare')rdMode='compare';
+  openTarget(linkedTarget,'rd');
+}
 </script>
 </body>
 </html>
