@@ -267,11 +267,7 @@ tbody tr.active{background:var(--teal-soft)}
 .rd-source details p{margin:5px 0}
 .rd-note{display:grid;gap:8px}
 .rd-note textarea{resize:vertical}
-.rd-note-actions,.rd-saved-heading{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px}
-.rd-saved-note{padding:14px 0;border-top:1px solid var(--line)}
-.rd-saved-note:last-child{padding-bottom:0}
-.rd-saved-note .rd-saved-text{white-space:pre-wrap;overflow-wrap:anywhere;margin-top:8px;font-weight:600}
-.rd-saved-note ul{margin:5px 0 0;padding-left:18px;overflow-wrap:anywhere;font-size:13px}
+.rd-note-actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px}
 @media(max-width:680px){.rd-question,.rd-pair{grid-template-columns:minmax(0,1fr)}}
 
 #pastReviewContent{display:grid;gap:14px}
@@ -308,10 +304,7 @@ tbody tr.active{background:var(--teal-soft)}
 .rd-guide ul{margin:1px 0 0;padding-left:18px}
 .rd-guide li{overflow-wrap:anywhere}
 #rdSelectedGuide{padding:10px 12px;border-radius:9px;background:var(--teal-soft)}
-.rd-saved-note{display:grid;gap:8px}
-.rd-saved-citations summary{color:var(--teal);cursor:pointer;font-weight:600}
 .rd-saved-summary{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
-.rd-saved-heading{justify-content:flex-start}
 .rd-review-form{display:grid;gap:10px;padding:12px;border-radius:10px;background:#f4f7f8}
 .rd-review-fields{display:grid;grid-template-columns:minmax(0,160px) minmax(0,1fr);align-items:start;gap:12px}
 .rd-review-fields label{display:grid;gap:5px}
@@ -393,6 +386,30 @@ tbody tr.active{background:var(--teal-soft)}
 .rd-disclosure[open]>summary{margin-bottom:9px}
 .selected-project-comparison .rd-disclosure{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#fff}
 .rd-case-detail{min-width:0}
+
+
+.rd-queue,.rd-queue-group{display:grid;gap:10px;min-width:0}
+.rd-queue-group h3 span{margin-left:5px;font-weight:400}
+.rd-queue-grid{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(82px,.46fr) 76px minmax(0,1.15fr);gap:8px 12px;align-items:start}
+.rd-queue-columns{padding:0 34px 2px 12px;color:var(--muted);font-size:12px;font-weight:700}
+.rd-saved-note{border-top:1px solid var(--line)}
+.rd-saved-note>summary{position:relative;list-style:none;cursor:pointer;padding:11px 34px 11px 12px}
+.rd-saved-note>summary::-webkit-details-marker{display:none}
+.rd-saved-note>summary::after{content:"▸";position:absolute;right:12px;top:11px;color:var(--teal)}
+.rd-saved-note[open]>summary{background:#eef6f5}
+.rd-saved-note[open]>summary::after{content:"▾"}
+.rd-saved-note .rd-saved-text{white-space:pre-wrap;overflow-wrap:anywhere;font-weight:700}
+.rd-queue-asset,.rd-queue-check{overflow-wrap:anywhere;color:var(--muted);font-size:13px}
+.rd-queue-detail{display:grid;gap:8px;padding:10px 12px 14px;background:#fbfcfd}
+.rd-saved-note ul{margin:0;padding-left:18px;overflow-wrap:anywhere;font-size:13px}
+.rd-other-notes{border-top:1px solid var(--line);padding-top:8px}
+.rd-other-notes>summary{color:var(--teal);font-weight:700;cursor:pointer;margin-bottom:8px}
+@media(max-width:700px){
+  .rd-queue-columns{display:none}
+  .rd-saved-note>summary{grid-template-columns:minmax(0,1fr) auto;column-gap:9px}
+  .rd-saved-note .rd-saved-text,.rd-queue-check{grid-column:1/-1}
+  .rd-saved-note>summary [data-label]::before{content:attr(data-label);display:block;color:var(--muted);font-size:11px;font-weight:600}
+}
 
 </style>
 </head>
@@ -891,10 +908,8 @@ function refreshRDToolbar() {
       const relevant = cards.find(card=>card.dataset.target===cur.id &&
         card.querySelector('.rd-saved-text').textContent===context.question) ||
         cards.find(card=>card.dataset.target===cur.id);
-      if (relevant) {
-        relevant.scrollIntoView({block:'start'});
-        relevant.querySelector('.rd-review-form select').focus({preventScroll:true});
-      } else focusRDSection('rdNotesTitle');
+      if (relevant) focusSavedReviewRow(relevant);
+      else focusRDSection('rdNotesTitle');
     }];
   } else if (rdMode==='evidence') {
     action = ['리뷰 질문 작성',()=>focusRDSection('rdNoteText')];
@@ -2251,10 +2266,10 @@ function openPastReview(targetId, caseId, referenceId, referenceIds=[]) {
 
 
 const ASSET_EVIDENCE_AREAS = {
-  pk:{label:'PK',name:'노출', gap:'효능 평가를 해석할 때 필요한 노출 시점과 검체의 원자료가 있는가?'},
-  pd:{label:'PD',name:'표적 관여·반응', gap:'효능 결과와 짝지어 볼 수 있는 표적 관여 또는 반응 지표의 원자료가 있는가?'},
-  efficacy:{label:'효능',name:'모델에서의 효과', gap:'모델별 평가 지표의 정의와 대조군·개체별 결과를 확인할 수 있는가?'},
-  safety:{label:'안전성',name:'관찰된 소견', gap:'노출 범위와 관찰 기간을 함께 해석할 수 있는 안전성 기록이 있는가?'}
+  pk:{label:'PK',name:'노출',check:'노출 보고서의 검체, 측정 시점, 개체별 원자료를 확인', gap:'효능 평가를 해석할 때 필요한 노출 시점과 검체의 원자료가 있는가?'},
+  pd:{label:'PD',name:'표적 관여·반응',check:'표적 관여·반응 기록의 측정 시점을 효능 평가 시점과 대조', gap:'효능 결과와 짝지어 볼 수 있는 표적 관여 또는 반응 지표의 원자료가 있는가?'},
+  efficacy:{label:'효능',name:'모델에서의 효과',check:'평가 지표의 정의, 관찰 기간, 대조군 기록을 확인', gap:'모델별 평가 지표의 정의와 대조군·개체별 결과를 확인할 수 있는가?'},
+  safety:{label:'안전성',name:'관찰된 소견',check:'안전성 기록에서 관찰 기간, 대조군, 노출 범위를 확인', gap:'노출 범위와 관찰 기간을 함께 해석할 수 있는 안전성 기록이 있는가?'}
 };
 
 /* Asset-specific synthetic evidence. Model indexes refer to the target's model list. */
@@ -2545,6 +2560,7 @@ function bindRDNote({mode,questionId,next,sources,getReviewContext}) {
     const attachments = [...sources,...references];
     const note = {
       targetId, mode, questionId, text:input.value.trim(),
+      assetCode:mode==='evidence' ? rdWorkContext.get(targetId)?.code : undefined,
       referenceId:reference?.id,
       referenceIds:references.length ? references.map(record=>record.id) : undefined,
       recommendation:recommendation && {id:recommendation.id,reason:recommendation.reason,documents:recommendation.documents,check:recommendation.check},
@@ -2559,6 +2575,7 @@ function bindRDNote({mode,questionId,next,sources,getReviewContext}) {
     const existing = rdNotes.find(saved => (saved.mode || 'evidence') === mode && saved.targetId === targetId &&
       saved.questionId === questionId && saved.text === note.text && saved.referenceId === note.referenceId &&
       noteReferenceIds(saved).join('|') === noteReferenceIds(note).join('|') &&
+      rdNoteAsset(saved,cur) === rdNoteAsset(note,cur) &&
       saved.recommendation?.id === note.recommendation?.id);
     openSaved.classList.remove('hidden');
     openSaved.onclick = () => openSavedReview(existing || note);
@@ -2596,13 +2613,20 @@ function persistRDNotes() {
   }
 }
 
+function setSavedNoteContext(note, target) {
+  const context = rdWorkContext.get(target.id);
+  const code = rdNoteAsset(note,target);
+  const selection = assetGapSelection(target,note.questionId);
+  const asset = selection || (code ? {code,area:context?.code===code ? context.area : undefined} : {});
+  rdWorkContext.set(target.id,{...context,...asset,question:note.text});
+  if (target.id===cur.id) refreshRDToolbar();
+}
+
 function openSavedReview(note) {
-  setRDWorkContext({...assetGapSelection(cur,note.questionId),question:note.text});
+  setSavedNoteContext(note,cur);
   rdMode = 'notes';
   renderRD();
-  const card = $('rdSavedNotes').children[rdNotes.indexOf(note)];
-  card?.scrollIntoView({block:'start'});
-  card?.querySelector('.rd-review-form select').focus({preventScroll:true});
+  focusSavedReviewRow($('rdSavedNotes').querySelector(`[data-index="${rdNotes.indexOf(note)}"]`));
 }
 
 function reviewOutcomeForm() {
@@ -2623,7 +2647,7 @@ function reviewOutcomeForm() {
   </form>`;
 }
 
-function bindReviewOutcome(article, note) {
+function bindReviewOutcome(article, note, onStatusChange) {
   const form = article.querySelector('.rd-review-form');
   const status = form.querySelector('select');
   const conclusion = form.querySelector('textarea');
@@ -2633,16 +2657,18 @@ function bindReviewOutcome(article, note) {
     badge.textContent = RD_REVIEW_STATES[value];
     badge.dataset.state = value;
   };
-  status.value = Object.hasOwn(RD_REVIEW_STATES, note.review?.status) ? note.review.status : 'pending';
+  status.value = rdNoteStatus(note);
   conclusion.value = typeof note.review?.conclusion === 'string' ? note.review.conclusion : '';
   showStatus(status.value);
   form.addEventListener('input', () => { message.textContent = ''; });
   form.addEventListener('submit', event => {
     event.preventDefault();
+    const previous = rdNoteStatus(note);
     note.review = {status:status.value,conclusion:conclusion.value.trim()};
     conclusion.value = note.review.conclusion;
     showStatus(note.review.status);
     message.textContent = persistRDNotes() ? '검토 결과를 저장했습니다.' : '현재 페이지에서만 검토 결과를 보관합니다.';
+    if (note.review.status!==previous) onStatusChange();
   });
 }
 
@@ -2651,60 +2677,119 @@ function noteReferenceIds(note) {
   return note.referenceId ? [note.referenceId] : [];
 }
 
+
+function rdNoteStatus(note) {
+  return Object.hasOwn(RD_REVIEW_STATES,note.review?.status) ? note.review.status : 'pending';
+}
+
+function rdNoteAsset(note, target) {
+  if (note.mode === 'stack') return assetGapSelection(target,note.questionId)?.code;
+  if (note.mode === 'compare') {
+    const project = (PAST_PROJECTS[target.id] || []).find(item=>item.id===note.questionId);
+    return target.assets.find(code=>project?.plan.source.startsWith(code+' · '));
+  }
+  return target.assets.includes(note.assetCode) ? note.assetCode : undefined;
+}
+
+function rdNoteNextCheck(note, target) {
+  const check = note.recommendation?.check;
+  if (typeof check==='string' && check.trim()) return check;
+  if (note.mode==='stack') {
+    const selection = assetGapSelection(target,note.questionId);
+    if (selection) return ASSET_EVIDENCE_AREAS[selection.area].check;
+  }
+  if (note.mode==='compare') return (PAST_PROJECTS[target.id] || []).find(item=>item.id===note.questionId)?.next;
+  return rdQuestions(target).find(item=>item.id===note.questionId)?.next;
+}
+
+function focusSavedReviewRow(row) {
+  if (!row) return;
+  const olderTargets = row.closest('.rd-other-notes');
+  if (olderTargets) olderTargets.open = true;
+  row.open = true;
+  updateRDToolbarHeight($('rdToolbar'));
+  row.scrollIntoView({block:'start'});
+  row.querySelector('.rd-review-form select').focus({preventScroll:true});
+}
+
 function renderRDNotes() {
   $('tab-rd').insertAdjacentHTML('beforeend', `<section class="card rd-review rd-saved" lang="ko">
-<h2 id="rdNotesTitle" tabindex="-1">저장한 리뷰 질문</h2>
-    <p class="sub">문서와 확인 항목을 검토한 뒤, 각 질문 아래에서 상태와 결론을 기록하세요. 기록은 이 브라우저에 저장됩니다.</p>
-    <div id="rdSavedNotes"></div>
-  </section>`);
-  if (!rdNotes.length) {
-    $('rdSavedNotes').textContent = '저장한 질문이 없습니다. 근거 검토나 과거 프로젝트 비교에서 질문을 저장하세요.';
-    return;
-  }
-  $('rdSavedNotes').innerHTML = rdNotes.map(note => {
-    const target = T(note.targetId);
-    const past = note.mode === 'compare';
-    const asset = note.mode === 'stack' && assetGapSelection(target,note.questionId);
-    const openLabel = past ? '과거 프로젝트 비교 열기' : asset ? '자산 근거 열기' : '근거 비교 열기';
-    const sourceLabels = past ? ['과거 보고서','현재 계획서'] : asset ? ['자산 보고서','자료 인덱스'] : ['내부','외부'];
-    return `<article class="rd-saved-note" data-target="${target.id}">
-      <div class="rd-saved-summary">
-        <div class="rd-saved-heading"><span class="pill">${target.sym}${asset ? ' · '+asset.code+' · '+ASSET_EVIDENCE_AREAS[asset.area].label : ''}</span><span class="pill review-status"></span></div>
-        <button class="btn ghost compact rd-open-comparison">${openLabel}</button>
-      </div>
-      <p class="rd-saved-text"></p>
-      <p class="sub rd-saved-reason hidden"></p>
-      <div class="rd-saved-guide hidden"></div>
-      <details class="rd-saved-citations"><summary>저장한 출처</summary>
-        <ul class="rd-saved-sources">${sourceLabels.map(label=>`<li>${label} · </li>`).join('')}${past && note.sources?.[2] ? '<li>참고 프로젝트 보고서 · </li>' : ''}${past && note.sources?.[3] ? '<li>두 번째 참고 프로젝트 보고서 · </li>' : ''}</ul>
+    <div><h2 id="rdNotesTitle" tabindex="-1">저장한 리뷰 질문</h2>
+      <p class="sub">${cur.sym}의 미해결 질문을 먼저 보여줍니다. 질문을 펼쳐 출처를 확인하고 검토 결과를 기록하세요.</p></div>
+    <div id="rdSavedNotes" class="rd-queue">
+      <section class="rd-queue-group" aria-labelledby="rdOpenQueueTitle">
+        <h3 id="rdOpenQueueTitle">확인 대기·자료 부족 <span id="rdOpenQueueCount" class="sub"></span></h3>
+        <div class="rd-queue-columns rd-queue-grid" aria-hidden="true"><span>질문</span><span>자산</span><span>상태</span><span>다음 확인 항목</span></div>
+        <div id="rdOpenQueue"></div>
+        <p id="rdQueueEmpty" class="sub">이 타겟에 미해결 질문이 없습니다.</p>
+      </section>
+      <section class="rd-queue-group hidden" id="rdDoneGroup" aria-labelledby="rdDoneQueueTitle">
+        <h3 id="rdDoneQueueTitle">확인 완료 <span id="rdDoneQueueCount" class="sub"></span></h3>
+        <div id="rdDoneQueue"></div>
+      </section>
+      <details class="rd-other-notes hidden">
+        <summary>다른 타겟 질문 <span class="sub" id="rdOtherQueueCount"></span></summary>
+        <div id="rdOtherQueue"></div>
       </details>
-      ${reviewOutcomeForm()}
-    </article>`;
-  }).join('');
-  $('rdSavedNotes').querySelectorAll('.rd-saved-note').forEach((article,index) => {
-    const note = rdNotes[index];
-    article.querySelector('.rd-open-comparison').addEventListener('click', () => {
-      const target = T(note.targetId);
-      rdWorkContext.set(target.id,{...rdWorkContext.get(target.id),...assetGapSelection(target,note.questionId),question:note.text});
-      if (note.mode === 'compare') openPastReview(note.targetId,note.questionId,note.referenceId,noteReferenceIds(note));
-      else if (note.mode === 'stack') openAssetReview(note.targetId,note.questionId);
-      else openRDReview(note.targetId,note.questionId);
-    });
-    article.querySelector('.rd-saved-text').textContent = note.text;
-    if (typeof note.recommendation?.reason === 'string') {
-      const reason = article.querySelector('.rd-saved-reason');
+    </div>
+  </section>`);
+  const entries = rdNotes.map((note,index)=>{
+    const target = T(note.targetId);
+    const past = note.mode==='compare';
+    const asset = note.mode==='stack';
+    const code = rdNoteAsset(note,target);
+    const sourceLabels = past ? ['과거 보고서','현재 계획서'] : asset ? ['자산 보고서','자료 인덱스'] : ['내부','외부'];
+    if (past && note.sources?.[2]) sourceLabels.push('참고 프로젝트 보고서');
+    if (past && note.sources?.[3]) sourceLabels.push('두 번째 참고 프로젝트 보고서');
+    const row = document.createElement('details');
+    row.className = 'rd-saved-note';
+    row.dataset.target = target.id;
+    row.dataset.index = index;
+    row.innerHTML = `<summary class="rd-queue-grid">
+        <span class="rd-saved-text" data-label="질문"></span>
+        <span class="rd-queue-asset" data-label="자산"></span>
+        <span class="rd-queue-status" data-label="상태"><span class="pill review-status"></span></span>
+        <span class="rd-queue-check" data-label="다음 확인 항목"></span>
+      </summary>
+      <div class="rd-queue-detail">
+        <div class="rd-saved-summary"><h4>저장한 출처</h4>
+          <button type="button" class="btn ghost compact rd-open-comparison">${past ? '과거 프로젝트 비교 열기' : asset ? '자산 근거 열기' : '근거 비교 열기'}</button>
+        </div>
+        <ul class="rd-saved-sources">${sourceLabels.map(label=>`<li>${label} · </li>`).join('')}</ul>
+        <p class="sub rd-saved-reason hidden"></p>
+        <div class="rd-saved-guide hidden"></div>
+        ${reviewOutcomeForm()}
+      </div>`;
+    row.querySelector('.rd-saved-text').textContent = note.text;
+    row.querySelector('.rd-queue-asset').textContent = target.id===cur.id ? code || '타겟 단위' : `${target.sym} · ${code || '타겟 단위'}`;
+    row.querySelector('.rd-queue-check').textContent = rdNoteNextCheck(note,target) || '저장한 출처에서 필요한 자료를 확인하세요.';
+    if (typeof note.recommendation?.reason==='string') {
+      const reason = row.querySelector('.rd-saved-reason');
       reason.textContent = '추천 이유 · ' + note.recommendation.reason;
       reason.classList.remove('hidden');
     }
-    paintReviewGuide(article.querySelector('.rd-saved-guide'), note.recommendation);
-    bindReviewOutcome(article, note);
-    article.querySelectorAll('.rd-saved-sources li').forEach((item,sourceIndex) => {
+    paintReviewGuide(row.querySelector('.rd-saved-guide'),note.recommendation);
+    row.querySelector('.rd-open-comparison').addEventListener('click',()=>{
+      setSavedNoteContext(note,target);
+      if (past) openPastReview(note.targetId,note.questionId,note.referenceId,noteReferenceIds(note));
+      else if (asset) openAssetReview(note.targetId,note.questionId);
+      else openRDReview(note.targetId,note.questionId);
+    });
+    row.addEventListener('toggle',()=>{
+      if (row.open && row.isConnected && note.targetId===cur.id) setSavedNoteContext(note,target);
+    });
+    bindReviewOutcome(row,note,()=>{
+      const save = row.querySelector('.rd-review-form button[type=submit]');
+      arrangeRows();
+      save.focus({preventScroll:true});
+    });
+    row.querySelectorAll('.rd-saved-sources li').forEach((item,sourceIndex)=>{
       const source = note.sources?.[sourceIndex];
-      if (!source || typeof source.name !== 'string' || typeof source.location !== 'string') {
+      if (!source || typeof source.name!=='string' || typeof source.location!=='string') {
         item.append('연결된 출처 없음');
         return;
       }
-      if (typeof source.url === 'string' && URL.canParse(source.url) && new URL(source.url).protocol === 'https:') {
+      if (typeof source.url==='string' && URL.canParse(source.url) && new URL(source.url).protocol==='https:') {
         const link = document.createElement('a');
         link.className = 'source-link';
         link.href = source.url;
@@ -2712,13 +2797,34 @@ function renderRDNotes() {
         link.rel = 'noopener noreferrer';
         link.textContent = source.name + ' ↗';
         item.append(link);
-      } else {
-        item.append(source.name);
-      }
+      } else item.append(source.name);
       item.append(' · ' + source.location);
     });
+    return {note,row};
   });
+  function arrangeRows() {
+    const open = [], done = [], others = [];
+    entries.forEach(({note,row})=>{
+      if (note.targetId!==cur.id) others.push(row);
+      else (rdNoteStatus(note)==='confirmed' ? done : open).push(row);
+    });
+    for (const [list,rows] of [[$('rdOpenQueue'),open],[$('rdDoneQueue'),done],[$('rdOtherQueue'),others]]) {
+      let anchor = list.firstElementChild;
+      rows.forEach(row=>{
+        if (row===anchor) anchor = anchor.nextElementSibling;
+        else list.insertBefore(row,anchor);
+      });
+    }
+    $('rdOpenQueueCount').textContent = `${open.length}건`;
+    $('rdDoneQueueCount').textContent = `${done.length}건`;
+    $('rdOtherQueueCount').textContent = `${others.length}건`;
+    $('rdQueueEmpty').classList.toggle('hidden',Boolean(open.length));
+    $('rdDoneGroup').classList.toggle('hidden',!done.length);
+    document.querySelector('.rd-other-notes').classList.toggle('hidden',!others.length);
+  }
+  arrangeRows();
 }
+
 
 /* ---------- boot ---------- */
 renderHome();
@@ -2752,11 +2858,14 @@ if(demoParams.get('view')==='rd' && T(linkedTarget)){
     const code=target.assets.includes(requested) ? requested : target.assets[0];
     const selection=assetGapSelection(target,code+':'+demoParams.get('gap'));
     assetEvidenceSelection.set(target.id,selection || {code});
+  } else if (demoParams.get('mode')==='notes'){
+    rdMode='notes';
   }
   openTarget(linkedTarget,'rd');
   const section=demoParams.get('section');
   const headings={reuse:'projectReuseTitle',precedents:'precedentDetailsToggle',plan:'planActionTitle',overview:'precedentOverviewTitle'};
   const heading=assetGapSearch ? 'assetPrecedentsTitle' : rdMode==='stack' ? ($('rdNoteText') ? 'rdNoteText' : 'assetEvidenceTitle') :
+    rdMode==='notes' ? 'rdNotesTitle' :
     location.hash==='#relatedProjectTitle' ? 'relatedProjectTitle' : headings[section] || (rdMode==='compare'?'precedentOverviewTitle':null);
   if (section==='precedents' && $('precedentDetails')) $('precedentDetails').open = true;
   focusRDSection(heading);
