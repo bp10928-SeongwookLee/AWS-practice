@@ -363,6 +363,13 @@ tbody tr.active{background:var(--teal-soft)}
 .asset-studies .tblwrap{margin-top:9px}
 .asset-studies table{min-width:530px}
 
+
+.asset-gap-context{display:grid;gap:10px;min-width:0}
+.asset-gap-context .rd-source{margin-top:0}
+.asset-gap-search label{display:grid;gap:5px;font-weight:700;min-width:0}
+.asset-gap-search select{font:inherit;width:100%;min-width:0;padding:8px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
+.asset-precedent-results{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:12px}
+
 </style>
 </head>
 <body>
@@ -807,13 +814,14 @@ function renderMarket(){
 
 /* ---------- R&D tab ---------- */
 function renderRD(){
-  const modes=[['evidence','근거 검토'],['notes','저장한 리뷰 질문'],['stack','자산별 근거 현황'],['compare','Compare with past project']];
+  const modes=[['evidence','Evidence Review'],['notes','Saved Review Questions'],['stack','Asset Evidence'],['compare','Compare with past project']];
   const seg=`<div class="seg rd-modes" aria-label="R&D Analysis">${modes.map(([mode,label]) =>
     `<button aria-pressed="${rdMode===mode}" class="${rdMode===mode?'on':''}" onclick="rdMode='${mode}';renderRD();document.querySelector('.rd-modes [aria-pressed=true]').focus()">${label}</button>`).join('')}</div>`;
   $('tab-rd').innerHTML=seg;
   if(rdMode==='evidence')renderRDEvidence();
   else if(rdMode==='notes')renderRDNotes();
   else if(rdMode==='stack')renderAssetEvidence();
+  else if(assetGapSearch?.targetId===cur.id)renderAssetGapSearch();
   else renderPastProjects();
 }
 
@@ -1671,12 +1679,134 @@ function projectRecommendationsHTML(items, applied) {
   </section>`;
 }
 
+
+function findRelatedProjects(targetId, design) {
+  return RELATED_PROJECT_ARCHIVE.filter(record=>record.targetId!==targetId)
+    .map(record=>({record,model:record.model===design.model,endpoint:record.endpoint===design.endpoint}))
+    .filter(match=>match.model || match.endpoint)
+    .sort((a,b)=>(Number(b.model)+Number(b.endpoint))-(Number(a.model)+Number(a.endpoint)));
+}
+
+function relatedProjectCard({record,model,endpoint}, design, action) {
+  const reason = [
+    model && `같은 모델 · ${PROJECT_MODELS[record.model]}`,
+    endpoint && `같은 평가 지표 · ${PROJECT_ENDPOINTS[record.endpoint]}`
+  ].filter(Boolean);
+  const differences = [
+    !model && `모델 · ${design.subjectLabel || '현재'} ${design.modelLabel || PROJECT_MODELS[design.model]} / 과거 ${PROJECT_MODELS[record.model]}`,
+    !endpoint && `평가 지표 · ${design.subjectLabel || '현재'} ${design.endpointLabel || PROJECT_ENDPOINTS[design.endpoint]} / 과거 ${PROJECT_ENDPOINTS[record.endpoint]}`,
+    design.measurement && design.measurement !== record.measurement && `측정 조건 · 현재 ${design.measurement} / 과거 ${record.measurement}`
+  ].filter(Boolean);
+  return `<article class="rd-evidence related-project">
+    <div><span class="pill">${T(record.targetId).sym}</span></div>
+    <h4>${record.title}</h4>
+    <div class="related-project-reasons">${reason.map(text=>`<span class="tag rd">${text}</span>`).join('')}</div>
+    ${differences.length ? `<ul class="related-project-differences">${differences.map(text=>`<li>${text}</li>`).join('')}</ul>` : ''}
+    <p><b>비교 시 주의할 점</b> · ${record.caution}</p>
+    ${pastSource(record)}
+    ${action}
+  </article>`;
+}
+
+const ASSET_MODEL_ALIASES = new Map([
+  ['G2019S knock-in','g2019s'],
+  ['Scn8a N1768D/+','scn8a'],
+  ['Amygdala kindling','kindling']
+]);
+const ASSET_ENDPOINT_ALIASES = new Map([['pRab10 (striatum)','rab10'],['Seizure frequency','seizureFrequency']]);
+let assetGapSearch;
+
+function assetPrecedentDesign(model, endpoint) {
+  const modelId = ASSET_MODEL_ALIASES.get(model) || Object.keys(PROJECT_MODELS).find(key=>PROJECT_MODELS[key]===model);
+  const endpointId = ASSET_ENDPOINT_ALIASES.get(endpoint) || Object.keys(PROJECT_ENDPOINTS).find(key=>PROJECT_ENDPOINTS[key]===endpoint);
+  return {model:modelId, endpoint:endpointId, modelLabel:model, endpointLabel:endpoint};
+}
+
+function openAssetGapSearch(code, area) {
+  assetEvidenceSelection.set(cur.id,{code,area});
+  assetGapSearch = {targetId:cur.id,code,area};
+  rdMode = 'compare';
+  renderRD();
+  $('assetPrecedentsTitle').focus();
+}
+
+function renderAssetGapSearch() {
+  const {code,area:key} = assetGapSearch;
+  const area = assetEvidence(cur,code).find(item=>item.id===key);
+  const study = area.study;
+  $('tab-rd').insertAdjacentHTML('beforeend', `<section class="rd-review asset-gap-search" lang="ko">
+    <div class="card asset-gap-context">
+      <div class="rd-note-actions"><button class="btn ghost compact" id="assetPrecedentsBack" type="button">← 자산 근거로 돌아가기</button>
+        <button class="btn ghost compact" id="regularPastProjects" type="button">기존 프로젝트 비교 열기</button></div>
+      <h2 id="assetPrecedentsTitle" tabindex="-1">자산 공백에서 과거 선례 찾기</h2>
+      <div><span class="pill">${cur.sym} · ${code} · ${area.label}</span></div>
+      <p><b>확인할 공백</b> · ${area.question}</p>
+      ${pastSource(study?.document || area.inventory)}
+    </div>
+    <section class="card related-projects" aria-labelledby="assetPrecedentsResultsTitle">
+      <div class="related-project-head"><h3 id="assetPrecedentsResultsTitle">관련 과거 프로젝트</h3><span id="assetPrecedentCount" class="sub" role="status"></span></div>
+      ${study
+        ? `<p class="sub">자산 보고서의 검색 기준 · ${study.model} / ${study.endpoint}</p>`
+        : `<label for="assetPrecedentBasis">검색 기준 선택
+            <select id="assetPrecedentBasis">
+              <option value="">타겟의 모델 또는 평가 지표 선택</option>
+              ${cur.models.map(([,model,endpoint],index)=>`<option value="${index}">${model} / ${endpoint}</option>`).join('')}
+            </select>
+            <span class="sub">연결된 자산 실험이 없어 타겟의 모델·지표를 검색 기준으로 직접 선택합니다.</span>
+          </label>`}
+      <label for="assetPrecedentFilter">일치 조건
+        <select id="assetPrecedentFilter"><option value="all">모델 또는 평가 지표</option>
+          <option value="model">같은 모델</option><option value="endpoint">같은 평가 지표</option></select>
+      </label>
+      <div class="asset-precedent-results" id="assetPrecedentResults"></div>
+    </section>
+  </section>`);
+  $('assetPrecedentsBack').addEventListener('click',() => {
+    assetGapSearch = null;
+    openAssetReview(cur.id,code+':'+key);
+  });
+  $('regularPastProjects').addEventListener('click',() => {
+    assetGapSearch = null;
+    renderRD();
+    ($('pastCase') || document.querySelector('.rd-modes [aria-pressed="true"]')).focus();
+  });
+  const basis = $('assetPrecedentBasis');
+  const filter = $('assetPrecedentFilter');
+  const results = $('assetPrecedentResults');
+  const render = () => {
+    const [,model,endpoint] = cur.models[basis?.value] || [];
+    const design = study ? assetPrecedentDesign(study.model,study.endpoint) : assetPrecedentDesign(model,endpoint);
+    design.subjectLabel = study ? '자산 보고서' : '선택 기준';
+    const kind = filter.value;
+    const matches = findRelatedProjects(cur.id,design).filter(match=>kind==='all'||match[kind]);
+    $('assetPrecedentCount').textContent = `${matches.length}건`;
+    results.innerHTML = matches.map(match=>{
+      const {record} = match;
+      const project = (PAST_PROJECTS[cur.id] || []).find(item=>(
+        match.model && item.plan.design.model===design.model ||
+        match.endpoint && item.plan.design.endpoint===design.endpoint
+      ));
+      const action = project
+        ? `<button type="button" class="btn ghost compact project-pick" data-gap-case="${project.id}" data-gap-reference="${record.id}">현재 계획과 비교</button>`
+        : '';
+      return relatedProjectCard(match,design,action);
+    }).join('') || `<p class="sub">${study || model ? '선택한 조건과 일치하는 합성 과거 기록이 없습니다.' : '검색할 모델과 평가 지표를 먼저 선택하세요.'}</p>`;
+  };
+  filter.addEventListener('change',render);
+  basis?.addEventListener('change',render);
+  results.addEventListener('click',event=>{
+    const button = event.target.closest('[data-gap-reference]');
+    if (!button) return;
+    const {gapCase,gapReference} = button.dataset;
+    assetGapSearch = null;
+    openPastReview(cur.id,gapCase,gapReference,[gapReference]);
+  });
+  render();
+}
+
 function renderRelatedProjects(item) {
   const design = item.plan.design;
-  const matches = RELATED_PROJECT_ARCHIVE.filter(record => record.targetId !== cur.id)
-    .map(record => ({record, model:record.model === design.model, endpoint:record.endpoint === design.endpoint}))
-    .filter(match => match.model || match.endpoint)
-    .sort((a,b) => (Number(b.model)+Number(b.endpoint))-(Number(a.model)+Number(a.endpoint)));
+  const matches = findRelatedProjects(cur.id,design);
 
   const filters = document.querySelectorAll('#relatedProjectFilters button');
   const results = $('relatedProjectResults');
@@ -1689,27 +1819,10 @@ function renderRelatedProjects(item) {
   const renderMatches = filter => {
     const visible = filter === 'all' ? matches : matches.filter(match => match[filter]);
     $('relatedProjectCount').textContent = `${visible.length}건`;
-    results.innerHTML = visible.map(({record,model,endpoint}) => {
-      const reason = [
-        model ? `같은 모델 · ${PROJECT_MODELS[record.model]}` : '',
-        endpoint ? `같은 평가 지표 · ${PROJECT_ENDPOINTS[record.endpoint]}` : ''
-      ].filter(Boolean);
-      const differences = [
-        !model && `모델 · 현재 ${PROJECT_MODELS[design.model]} / 과거 ${PROJECT_MODELS[record.model]}`,
-        !endpoint && `평가 지표 · 현재 ${PROJECT_ENDPOINTS[design.endpoint]} / 과거 ${PROJECT_ENDPOINTS[record.endpoint]}`,
-        design.measurement !== record.measurement && `측정 조건 · 현재 ${design.measurement} / 과거 ${record.measurement}`
-      ].filter(Boolean);
-      return `<article class="rd-evidence related-project">
-        <div><span class="pill">${T(record.targetId).sym}</span></div>
-        <h4>${record.title}</h4>
-        <div class="related-project-reasons">${reason.map(text=>`<span class="tag rd">${text}</span>`).join('')}</div>
-        ${differences.length ? `<ul class="related-project-differences">${differences.map(text=>`<li>${text}</li>`).join('')}</ul>` : ''}
-        <p><b>비교 시 주의할 점</b> · ${record.caution}</p>
-        ${pastSource(record)}
-        <button type="button" class="btn ghost compact project-pick" data-reference="${record.id}"
-          aria-controls="selectedProjectComparison">선택해서 비교</button>
-      </article>`;
-    }).join('') || '<p class="sub">이 조건에 맞는 다른 타겟의 과거 기록이 없습니다.</p>';
+    results.innerHTML = visible.map(match => relatedProjectCard(match,design,
+      `<button type="button" class="btn ghost compact project-pick" data-reference="${match.record.id}"
+        aria-controls="selectedProjectComparison">선택해서 비교</button>`
+    )).join('') || '<p class="sub">이 조건에 맞는 다른 타겟의 과거 기록이 없습니다.</p>';
     updateButtons();
   };
   filters.forEach(button => button.addEventListener('click', () => {
@@ -1985,6 +2098,7 @@ function pastSource(source) {
 }
 
 function openPastReview(targetId, caseId, referenceId, referenceIds=[]) {
+  assetGapSearch = null;
   if (caseId) {
     pastSelection.set(targetId, caseId);
     const item = PAST_PROJECTS[targetId].find(project => project.id === caseId);
@@ -2114,8 +2228,11 @@ function setAssetEvidence(code, selectedArea) {
     <div><p class="eyebrow">확보 근거</p><p>${area.study?.summary || '현재 이 자산에 연결된 보고서가 없습니다.'}</p></div>
     ${pastSource(area.study?.document || area.inventory)}
     <div class="asset-gap"><p class="eyebrow">확인할 공백</p><p>${area.question}</p></div>
-    <button type="button" class="btn ghost compact" data-asset-gap="${area.id}" aria-controls="assetGapEditor"
-      aria-pressed="false">리뷰 질문으로 작성</button>
+    <div class="rd-note-actions">
+      <button type="button" class="btn ghost compact" data-asset-gap="${area.id}" aria-controls="assetGapEditor"
+        aria-pressed="false">리뷰 질문으로 작성</button>
+      <button type="button" class="btn ghost compact" data-asset-precedents="${area.id}">Compare with past project</button>
+    </div>
   </article>`).join('')}</div>
   <div id="assetGapEditor" class="hidden"></div>
   <details class="card asset-studies" id="assetStudies">
@@ -2137,6 +2254,9 @@ function setAssetEvidence(code, selectedArea) {
       renderAssetGap(code,area);
       $('rdNoteText').focus();
     });
+  });
+  $('assetEvidenceContent').querySelectorAll('[data-asset-precedents]').forEach(button => {
+    button.addEventListener('click',() => openAssetGapSearch(code,button.dataset.assetPrecedents));
   });
   if (selectedArea) renderAssetGap(code,evidence.find(area=>area.id===selectedArea));
 }
@@ -2454,6 +2574,8 @@ const linkedTarget=demoParams.get('target');
 if(demoParams.get('view')==='rd' && T(linkedTarget)){
   if(demoParams.get('mode')==='compare' || location.hash==='#relatedProjectTitle'){
     rdMode='compare';
+    const assetGap=assetGapSelection(T(linkedTarget),demoParams.get('asset')+':'+demoParams.get('gap'));
+    if (assetGap) assetGapSearch={targetId:linkedTarget,...assetGap};
     const cases=PAST_PROJECTS[linkedTarget] || [];
     const project=cases.find(item=>item.id===demoParams.get('case')) || cases[0];
     const ids=demoParams.getAll('reference');
@@ -2472,7 +2594,7 @@ if(demoParams.get('view')==='rd' && T(linkedTarget)){
   openTarget(linkedTarget,'rd');
   const section=demoParams.get('section');
   const headings={reuse:'projectReuseTitle',precedents:'selectedProjectTitle',plan:'planActionTitle'};
-  const heading=rdMode==='stack' ? ($('rdNoteText') ? 'rdNoteText' : 'assetEvidenceTitle') :
+  const heading=assetGapSearch ? 'assetPrecedentsTitle' : rdMode==='stack' ? ($('rdNoteText') ? 'rdNoteText' : 'assetEvidenceTitle') :
     location.hash==='#relatedProjectTitle' ? 'relatedProjectTitle' : headings[section] || 'projectPromptsTitle';
   $(heading)?.focus();
 }
